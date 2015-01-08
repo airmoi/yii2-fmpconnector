@@ -78,6 +78,7 @@ class FmpHelper extends Component {
     private $_fm;
     private $_layout;
     private $_valueLists = [];
+    private $_scriptResult;
     
     public function __construct($config = []) {
         \Yii::configure($this, $config);
@@ -103,31 +104,73 @@ class FmpHelper extends Component {
         $result = $cmd->execute();
         if (FileMaker::isError($result))
         {
-            /**
-             *  @var $result FileMaker_Error
-             */
-            return '<SCRIPT_ERRORCODE>'.$result->getCode().'</SCRIPT_ERRORCODE><SCRIPT_ERRORDESCRIPTION>'.$result->getMessage().'</SCRIPT_ERRORDESCRIPTION>';
+            $this->_scriptResult = '<SCRIPT_ERRORCODE>'.$result->getCode().'</SCRIPT_ERRORCODE><SCRIPT_ERRORDESCRIPTION>'.$result->getMessage().'</SCRIPT_ERRORDESCRIPTION>';
+            return false;
         }
         $record = $result->getFirstRecord();
-        return html_entity_decode($record->getField($this->resultField));
+        $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
+        return true;
     }
     
-    public static function xmlget($data, $tag) {
-        if(substr($data, 0, 5 ) != '<?xml')
-                $data = "<?xml version='1.0' standalone='yes'?><body>".$data."</body>";
-        
-        $xml = new \SimpleXMLElement($data);
-        
-        if ( $result = $xml->xpath('//'.$tag))
-        {
-            return $result[0][0];
-        }
-        if ( preg_match('#<'.$tag.'>(.*)</'.$tag.'>#i', $data, $matches) ){
-            return $matches[1];
-        }
+    /**
+     * Renvoi le contenu de la balise 
+     * 
+     * @param mixed $data an xml string or SimpleXMLElement object
+     * @param string $tag XML node name to return 
+     * @param int $i node repetition n° 
+     * @return \SimpleXMLElement|string|null If node contains subnodes, returns subnodes, node content if node contain a string, null if not dosn't exists 
+     */
+    public static function xmlget($data, $tag, $i = 1 ) {
+        if ( $data instanceof \SimpleXMLElement)
+            $xml = $data;
         else {
-            return null;
+            if(substr($data, 0, 5 ) != '<?xml')
+                    $data = "<?xml version='1.0' standalone='yes'?><body>".$data."</body>";
+            //$old = libxml_use_internal_errors(true);
+            if ( !$xml = simplexml_load_string($data)) {
+                Yii::error('xmlget error : '.$data. '('.print_r(libxml_get_errors(), true).')', 'airmoi\yii2fmconnector\api\FmpHelper::getValueList');
+                    return null;
+            }
         }
+
+        if ( $result = $xml->xpath($tag))
+        {
+            if ( sizeof( $result[$i]->children() ) > 0) {
+                return $result[$i];
+            }
+            else {
+                return (string) $result[$i];
+            }
+        }
+        else
+            return null;
+    }
+    
+    /**
+     * Returns executed script error code
+     * 
+     * @return string Error code
+     */
+    public function getScriptError() {
+       return self::xmlget($this->_scriptResult, 'SCRIPT_ERRORCODE');
+    }
+    
+    /**
+     * Returns executed script error description
+     * 
+     * @return string Error code
+     */
+    public function getScriptErrorDescription() {
+       return self::xmlget($this->_scriptResult, 'SCRIPT_ERRORDESCRIPTION');
+    }
+    
+    /**
+     * Returns executed script result
+     * 
+     * @return string Error code
+     */
+    public function getScriptResult() {
+       return self::xmlget($this->_scriptResult, 'SCRIPT_RESULT');
     }
     
     public function getValueList($listName){    
