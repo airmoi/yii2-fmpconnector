@@ -7,7 +7,7 @@
     "authors": [
         {
             "name": "Romain Dunand",
-            "email": "romain_pro@dunand.me"
+            "email": "airmoi@gmail.com"
         }
     ],
     "require": {
@@ -15,7 +15,14 @@
     },
     "autoload": {
         "psr-4": {
-            "airmoi\\yii2fmconnector\\": ""
+            "airmoi\\yii2fmconnector\\db\\": "db/"
+            "airmoi\\yii2fmconnector\\api\\": "api/"
         }
+    },
+	"repositories":[
+    {
+        "type": "git",
+        "url": "https://github.com/airmoi/yii2-fmpconnector.git"
     }
+]
 }
