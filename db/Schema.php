@@ -7,7 +7,7 @@
 
 namespace airmoi\yii2fmconnector\db;
 
-use airmoi\yii2fmpodbc\ColumnSchema;
+use airmoi\yii2fmconnector\db\ColumnSchema;
 use yii;
 
 /**
@@ -260,7 +260,7 @@ class Schema extends \yii\db\Schema
      */
     protected function createColumnSchema()
     {
-        return Yii::createObject('airmoi\yii2fmpodbc\ColumnSchema');
+        return Yii::createObject('airmoi\yii2fmconnector\db\ColumnSchema');
     }
     
 }
