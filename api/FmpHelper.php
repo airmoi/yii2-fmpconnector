@@ -71,6 +71,7 @@ class FmpHelper extends Component {
     public $resultField = "PHP_scriptResult";
     public $valueListLayout = "PHP_valueLists";
     public $host = 'localhost';
+    public $db = '';
     public $username = '';
     public $password = '';
     
@@ -90,7 +91,7 @@ class FmpHelper extends Component {
 
     private function initConnection() { 
         if ( $this->_fm === null )
-            $this->_fm = new FileMaker('Logistics', $this->host, $this->username, $this->password);
+            $this->_fm = new FileMaker($this->db, $this->host, $this->username, $this->password);
     }
     
     public function performScript($scriptName, array $params){
