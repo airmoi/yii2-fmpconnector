@@ -150,6 +150,10 @@ class PDOStatement extends \PDOStatement {
     private $_db;
     private $_fetchMode = PDO::FETCH_ASSOC;
     private $_query;
+    private $_lastExec;
+    private $_lastError;
+    private $_lastErrorMessage;
+    private $_rowCount = 0;
     /* Méthodes */
 
     /**
@@ -242,8 +246,12 @@ class PDOStatement extends \PDOStatement {
         
         /*if (!odbc_execute($this->_statement, $input_parameters))
             $this->throwErrors();*/
-        @odbc_execute($this->_statement, $input_parameters);
-        
+        if ($this->_lastExec = @odbc_execute($this->_statement, $input_parameters) ) {
+            $this->_lastError = odbc_error ();
+            $this->_lastErrorMessage = odbc_errormsg();
+            //return false;
+        }
+        $this->rowCount();
         odbc_longreadlen($this->_statement, 1024*1024*30);
         return true;
         
@@ -264,8 +272,12 @@ class PDOStatement extends \PDOStatement {
             return $row;
         }
         elseif ( $fetch_style == PDO::FETCH_COLUMN) {    
-            if ( !$row = @odbc_fetch_array ($this->_statement, $cursor_offset ))
+            if ( !$row = @odbc_fetch_array ($this->_statement ))
                     return false;
+            $key = key($row);
+            $result =  $row[key($row)];
+            $this->_lastError = odbc_error ();
+            $this->_lastErrorMessage = odbc_errormsg();
             return $row[key($row)];
         }
         elseif ( $fetch_style == PDO::FETCH_BOTH or $fetch_style == PDO::FETCH_NUM){
@@ -380,9 +392,9 @@ class PDOStatement extends \PDOStatement {
      * @return int
      */
     public function  rowCount (  ){
-        $result = odbc_num_rows($this->_statement);
+        $this->_rowCount = odbc_num_rows($this->_statement);
             //$this->throwErrors();
-        return $result;
+        return $this->_rowCount;
     }
     public function  setAttribute (  $attribute ,  $value ){
         return false;

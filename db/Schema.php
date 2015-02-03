@@ -197,9 +197,10 @@ class Schema extends \yii\db\Schema
      */
     protected function findTableNames($schema = '')
     {
-        $sql="SELECT DISTINCT(BaseTableName) FROM FileMaker_Tables";
-
-        return $this->db->createCommand($sql)->queryColumn();
+        $sql="SELECT (BaseTableName) FROM FileMaker_Tables";
+        $tempResult = $this->db->createCommand($sql)->queryColumn();
+        $result = array_unique($tempResult);
+        return $result;
     }
     
     /**
