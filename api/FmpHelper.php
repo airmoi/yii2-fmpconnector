@@ -121,7 +121,7 @@ class FmpHelper extends Component {
      * @param int $i node repetition n° 
      * @return \SimpleXMLElement|string|null If node contains subnodes, returns subnodes, node content if node contain a string, null if not dosn't exists 
      */
-    public static function xmlget($data, $tag, $i = 1 ) {
+    public static function xmlget($data, $tag, $i = 0 ) {
         if ( $data instanceof \SimpleXMLElement)
             $xml = $data;
         else {
