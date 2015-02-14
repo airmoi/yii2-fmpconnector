@@ -146,7 +146,7 @@ class Schema extends \yii\db\Schema
         $column->unsigned = false;
         $column->comment = "";
         
-        if(preg_match('/varchar(\d+)/', $column->dbType, $matches)){
+        if(preg_match('/varchar\((\d+)\)/', $column->dbType, $matches)){
             $column->type = $this->typeMap['varchar'];
             $column->size = $matches[1];
         }
