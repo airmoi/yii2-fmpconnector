@@ -246,11 +246,12 @@ class PDOStatement extends \PDOStatement {
         
         /*if (!odbc_execute($this->_statement, $input_parameters))
             $this->throwErrors();*/
-        if ($this->_lastExec = @odbc_execute($this->_statement, $input_parameters) ) {
-            $this->_lastError = odbc_error ();
+        if (!$this->_lastExec = @odbc_execute($this->_statement, $input_parameters) ) {
+            $this->_lastError = odbc_error();
             $this->_lastErrorMessage = odbc_errormsg();
-            //return false;
+            return false;
         }
+
         $this->rowCount();
         odbc_longreadlen($this->_statement, 1024*1024*30);
         return true;

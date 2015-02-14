@@ -1,4 +1,4 @@
-<?php
+$<?php
 /**
  * @link https://github.com/airmoi/yii2-fmpconnector
  * @copyright Copyright (c) 2014 Romain Dunand
@@ -146,7 +146,13 @@ class Schema extends \yii\db\Schema
         $column->unsigned = false;
         $column->comment = "";
         
+        if(preg_match('/varchar(\d+)/', $column->dbType, $matches)){
+            $column->type = $this->typeMap['varchar'];
+            $column->size = $matches[1];
+        }
+        else {
         $column->type = $this->typeMap[$column->dbType];
+        }
         $column->phpType = $this->getColumnPhpType($column);
 
         return $column;
