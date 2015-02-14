@@ -1,4 +1,4 @@
-$<?php
+<?php
 /**
  * @link https://github.com/airmoi/yii2-fmpconnector
  * @copyright Copyright (c) 2014 Romain Dunand
