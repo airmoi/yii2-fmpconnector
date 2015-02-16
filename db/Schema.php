@@ -203,7 +203,7 @@ class Schema extends \yii\db\Schema
      */
     protected function findTableNames($schema = '')
     {
-        $sql="SELECT (BaseTableName) FROM FileMaker_Tables";
+        $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables";
         $tempResult = $this->db->createCommand($sql)->queryColumn();
         $result = array_unique($tempResult);
         return $result;
@@ -239,6 +239,7 @@ class Schema extends \yii\db\Schema
         static $typeMap = [
             // abstract type => php type
             'smallint' => 'integer',
+            'decimal' => 'integer',
             'integer' => 'integer',
             'bigint' => 'integer',
             'boolean' => 'boolean',
