@@ -70,6 +70,9 @@ class FmpHelper extends Component {
     public $resultLayout = "PHP_scriptResult";
     public $resultField = "PHP_scriptResult";
     public $valueListLayout = "PHP_valueLists";
+    public $errorTag = "SCRIPT_ERRORCODE";
+    public $errorDescriptionTag = "SCRIPT_ERRORDESCRIPTION";
+    public $scriptResultTag = "SCRIPT_RESULT";
     public $host = 'localhost';
     public $db = '';
     public $username = '';
@@ -100,14 +103,18 @@ class FmpHelper extends Component {
         foreach ($params as $name => $value){
            $scriptParameters .= "<".$name.">".$value."</".$name.">";
         }
+        Yii::trace("Performing script $scriptName with params $scriptParameters", __NAMESPACE__ . __CLASS__);
+        $t0 = microtime(true);
         $cmd = $this->_fm->newPerformScriptCommand($this->resultLayout, $scriptName, $scriptParameters);
         
         $result = $cmd->execute();
         if (FileMaker::isError($result))
         {
-            $this->_scriptResult = '<SCRIPT_ERRORCODE>'.$result->getCode().'</SCRIPT_ERRORCODE><SCRIPT_ERRORDESCRIPTION>'.$result->getMessage().'</SCRIPT_ERRORDESCRIPTION>';
+            Yii::error("Script error : ". $result->getCode() . ' ' . $result->getMessage(), __NAMESPACE__ . __CLASS__);
+            $this->_scriptResult = '<'.$this->errorTag.'>'.$result->getCode().'</'.$this->errorTag.'><'.$this->errorDescriptionTag.'>'.$result->getMessage().'</'.$this->errorDescriptionTag.'>';
             return false;
         }
+        Yii::trace("Script performed successfully in " . (microtime(true)-$t0), __NAMESPACE__ . __CLASS__);
         $record = $result->getFirstRecord();
         $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
         return true;
@@ -128,7 +135,7 @@ class FmpHelper extends Component {
             if(substr($data, 0, 5 ) != '<?xml')
                     $data = "<?xml version='1.0' standalone='yes'?><body>".$data."</body>";
             //$old = libxml_use_internal_errors(true);
-            if ( !$xml = simplexml_load_string($data)) {
+            if ( !$xml = simplexml_load_string($data, 'SimpleXMLElement', LIBXML_NOCDATA)) {
                 Yii::error('xmlget error : '.$data. '('.print_r(libxml_get_errors(), true).')', 'airmoi\yii2fmconnector\api\FmpHelper::getValueList');
                     return null;
             }
@@ -153,7 +160,7 @@ class FmpHelper extends Component {
      * @return string Error code
      */
     public function getScriptError() {
-       return self::xmlget($this->_scriptResult, 'SCRIPT_ERRORCODE');
+       return self::xmlget($this->_scriptResult, $this->errorTag);
     }
     
     /**
@@ -162,7 +169,7 @@ class FmpHelper extends Component {
      * @return string Error code
      */
     public function getScriptErrorDescription() {
-       return self::xmlget($this->_scriptResult, 'SCRIPT_ERRORDESCRIPTION');
+       return self::xmlget($this->_scriptResult, $this->errorDescriptionTag);
     }
     
     /**
@@ -171,7 +178,7 @@ class FmpHelper extends Component {
      * @return string Error code
      */
     public function getScriptResult() {
-       return self::xmlget($this->_scriptResult, 'SCRIPT_RESULT');
+       return self::xmlget($this->_scriptResult, $this->scriptResultTag);
     }
     
     public function getValueList($listName){    
