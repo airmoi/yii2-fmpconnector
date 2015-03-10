@@ -175,8 +175,8 @@ class FmpHelper extends Component {
     /**
      * Returns executed script result
      * 
-     * @return string Error code
-     */
+     * @return string The script result 
+    */
     public function getScriptResult() {
        return self::xmlget($this->_scriptResult, $this->scriptResultTag);
     }
