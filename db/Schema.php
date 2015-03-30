@@ -203,7 +203,7 @@ class Schema extends \yii\db\Schema
      */
     protected function findTableNames($schema = '')
     {
-        $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables";
+        $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables WHERE BaseTableName IS NOT NULL";
         $tempResult = $this->db->createCommand($sql)->queryColumn();
         $result = array_values(array_unique($tempResult));
         return $result;

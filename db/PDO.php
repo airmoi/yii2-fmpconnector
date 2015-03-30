@@ -273,10 +273,13 @@ class PDOStatement extends \PDOStatement {
             return $row;
         }
         elseif ( $fetch_style == PDO::FETCH_COLUMN) {    
-            if ( !$row = @odbc_fetch_array ($this->_statement ))
+            if ( !$row = @odbc_fetch_array ($this->_statement )){
+                    $this->_lastError = odbc_error ();
+                    $this->_lastErrorMessage = odbc_errormsg();
                     return false;
+            }
             $key = key($row);
-            $result =  $row[key($row)];
+            $result = $row[key($row)];
             $this->_lastError = odbc_error ();
             $this->_lastErrorMessage = odbc_errormsg();
             return $row[key($row)];
