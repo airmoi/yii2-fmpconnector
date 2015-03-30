@@ -205,7 +205,7 @@ class Schema extends \yii\db\Schema
     {
         $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables";
         $tempResult = $this->db->createCommand($sql)->queryColumn();
-        $result = array_unique($tempResult);
+        $result = array_values(array_unique($tempResult));
         return $result;
     }
     
