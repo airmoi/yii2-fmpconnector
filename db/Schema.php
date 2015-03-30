@@ -219,7 +219,7 @@ class Schema extends \yii\db\Schema
             if ( substr($c->name, 0, 3)=="zkf" || substr($c->name, 0, 4)=="zkp_") { 
                 $XXX = $this->getTableNameFromXXX(preg_replace('/(zkf|zkp)_([^_]*).*/', "$2", $c->name));
                 if ( sizeof ($XXX) )
-                    $table->foreignKeys[] = [$XXX[0], "zkp" => $c->name];
+                    $table->foreignKeys[] = [$XXX[0],   $c->name => "zkp"];
             }
         }
     }
