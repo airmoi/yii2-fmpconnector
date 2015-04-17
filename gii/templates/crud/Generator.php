@@ -6,17 +6,9 @@
  */
 
 
-namespace airmoi\yii2fmconnector\gii\templates\crud;
+namespace airmoi\yii2fmconnector\gii\crud;
 
-use Yii;
-use yii\db\ActiveRecord;
-use yii\db\BaseActiveRecord;
-use yii\db\Schema;
-use yii\gii\CodeFile;
 use yii\helpers\Inflector;
-use yii\helpers\VarDumper;
-use yii\web\Controller;
-
 /**
  * Generates CRUD
  *
@@ -62,7 +54,7 @@ class Generator extends \yii\gii\generators\crud\Generator
             foreach ( $tableSchema->foreignKeys as $relation) {
                 if ( array_key_exists($attribute, $relation)) {
                     return "\$form->field(\$model, '$attribute')->dropDownList("
-                    . $relation[0]."::valueList()" .", ['prompt' => ''])";
+                    . Inflector::id2camel($relation[0], '_')."::valueList()" .", ['prompt' => ''])";
                 }
             }
             

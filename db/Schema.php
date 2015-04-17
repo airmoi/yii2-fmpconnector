@@ -150,6 +150,10 @@ class Schema extends \yii\db\Schema
             $column->type = $this->typeMap['varchar'];
             $column->size = $matches[1];
         }
+        /* handle multivalued field (ignore multivalues) */
+        elseif(preg_match('/([^\[]*)\[(\d+)\]/', $column->dbType, $matches)){
+             $column->type = $this->typeMap[$matches[1]];
+        }
         else {
         $column->type = $this->typeMap[$column->dbType];
         }
