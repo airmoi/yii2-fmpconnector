@@ -18,6 +18,7 @@ use yii;
  */
 class Schema extends \yii\db\Schema
 {
+    public $ignoreFields = [];
     /**
      * @var array mapping from physical column types (keys) to abstract column types (values)
      */
@@ -172,14 +173,13 @@ class Schema extends \yii\db\Schema
         /*
         * Ignore Global and summary fields
         */
-        $sql="SELECT * FROM FileMaker_Fields WHERE TableName = '".$table->fullName."' "
-                . "AND FieldType NOT LIKE 'global%' "
-                . "AND FieldClass NOT LIKE 'Summary' " 
-                . "AND FieldName NOT LIKE 'zkk_%' "
-                . "AND FieldName NOT LIKE 'zgi_%' "
-                . "AND FieldName NOT LIKE 'zzz_%' "
-                . "AND FieldName NOT LIKE 'z_foundCount_cU' "
-                . "AND FieldName NOT LIKE 'z_listOf_eval_cU'";
+        $sql="SELECT * FROM FileMaker_Fields WHERE TableName = '".$table->fullName."' ";
+        
+        foreach ( $this->ignoreFields as $type => $patterns ){
+            foreach ( $patterns as $pattern ) {
+                $sql .= "AND $type NOT LIKE '$pattern' ";
+            }
+        };
 
         try {
             $columns = $this->db->createCommand($sql)->queryAll();
