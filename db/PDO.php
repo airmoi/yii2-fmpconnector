@@ -24,9 +24,9 @@ class PDO extends \PDO
         
         /* remove driverName if predent on connection string) */
         if(($pos=strpos($dsn, ':'))!==false)
-			$dsn =  strtolower(substr($dsn, $pos+1, strlen($dsn)-$pos));
+            $dsn =  strtolower(substr($dsn, $pos+1, strlen($dsn)-$pos));
         
-        if ( !$this->_db = @odbc_connect($dsn, $username, $password))
+        if ( !$this->_db = @odbc_connect($dsn, utf8_decode($username), $password))
             $this->throwErrors();
         
         //odbc_longreadlen($this->_db, 1000000) ;//1024*1024*30);
@@ -108,10 +108,10 @@ class PDO extends \PDO
      * @return pdoODBCStatement
      */
     public function prepare (  $statement , $driver_options = array() ) {
-        $this->_query = $statement;
-        if (!$stmt = @odbc_prepare($this->_db, $statement))
+        $this->_query = utf8_decode($statement);
+        if (!$stmt = @odbc_prepare($this->_db, $this->_query))
             $this->throwErrors();
-       return new PDOStatement($stmt, $this->_db, $statement); 
+       return new PDOStatement($stmt, $this->_db, $this->_query); 
     }
     
     public function  query (  $statement ) {
@@ -273,10 +273,13 @@ class PDOStatement extends \PDOStatement {
             return $row;
         }
         elseif ( $fetch_style == PDO::FETCH_COLUMN) {    
-            if ( !$row = @odbc_fetch_array ($this->_statement ))
+            if ( !$row = @odbc_fetch_array ($this->_statement )){
+                    $this->_lastError = odbc_error ();
+                    $this->_lastErrorMessage = odbc_errormsg();
                     return false;
+            }
             $key = key($row);
-            $result =  $row[key($row)];
+            $result = $row[key($row)];
             $this->_lastError = odbc_error ();
             $this->_lastErrorMessage = odbc_errormsg();
             return $row[key($row)];

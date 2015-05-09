@@ -16,7 +16,8 @@
     "autoload": {
         "psr-4": {
             "airmoi\\yii2fmconnector\\db\\": "db/",
-            "airmoi\\yii2fmconnector\\api\\": "api/"
+            "airmoi\\yii2fmconnector\\api\\": "api/",
+            "airmoi\\yii2fmconnector\\gii\\crud\\": "gii/templates/crud/"
         }
     },
 	"repositories":[

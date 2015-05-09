@@ -18,6 +18,7 @@ use yii;
  */
 class Schema extends \yii\db\Schema
 {
+    public $ignoreFields = [];
     /**
      * @var array mapping from physical column types (keys) to abstract column types (values)
      */
@@ -150,6 +151,10 @@ class Schema extends \yii\db\Schema
             $column->type = $this->typeMap['varchar'];
             $column->size = $matches[1];
         }
+        /* handle multivalued field (ignore multivalues) */
+        elseif(preg_match('/([^\[]*)\[(\d+)\]/', $column->dbType, $matches)){
+             $column->type = $this->typeMap[$matches[1]];
+        }
         else {
         $column->type = $this->typeMap[$column->dbType];
         }
@@ -168,14 +173,13 @@ class Schema extends \yii\db\Schema
         /*
         * Ignore Global and summary fields
         */
-        $sql="SELECT * FROM FileMaker_Fields WHERE TableName = '".$table->fullName."' "
-                . "AND FieldType NOT LIKE 'global%' "
-                . "AND FieldClass NOT LIKE 'Summary' " 
-                . "AND FieldName NOT LIKE 'zkk_%' "
-                . "AND FieldName NOT LIKE 'zgi_%' "
-                . "AND FieldName NOT LIKE 'zzz_%' "
-                . "AND FieldName NOT LIKE 'z_foundCount_cU' "
-                . "AND FieldName NOT LIKE 'z_listOf_eval_cU'";
+        $sql="SELECT * FROM FileMaker_Fields WHERE TableName = '".$table->fullName."' ";
+        
+        foreach ( $this->ignoreFields as $type => $patterns ){
+            foreach ( $patterns as $pattern ) {
+                $sql .= "AND $type NOT LIKE '$pattern' ";
+            }
+        };
 
         try {
             $columns = $this->db->createCommand($sql)->queryAll();
@@ -203,9 +207,9 @@ class Schema extends \yii\db\Schema
      */
     protected function findTableNames($schema = '')
     {
-        $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables";
+        $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables WHERE BaseTableName IS NOT NULL";
         $tempResult = $this->db->createCommand($sql)->queryColumn();
-        $result = array_unique($tempResult);
+        $result = array_values(array_unique($tempResult));
         return $result;
     }
     
@@ -219,7 +223,7 @@ class Schema extends \yii\db\Schema
             if ( substr($c->name, 0, 3)=="zkf" || substr($c->name, 0, 4)=="zkp_") { 
                 $XXX = $this->getTableNameFromXXX(preg_replace('/(zkf|zkp)_([^_]*).*/', "$2", $c->name));
                 if ( sizeof ($XXX) )
-                    $table->foreignKeys[] = [$XXX[0], "zkp" => $c->name];
+                    $table->foreignKeys[] = [$XXX[0],   $c->name => "zkp"];
             }
         }
     }
