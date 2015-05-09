@@ -99,7 +99,7 @@ class FmpHelper extends Component {
             $this->_cookie = file_get_contents (Yii::getAlias('@runtime').'/WPCSessionID');
             setcookie ('WPCSessionID', $this->_cookie) ;
         }
-        $this->_cookie = $_COOKIE["WPCSessionID"];
+        $this->_cookie = @$_COOKIE["WPCSessionID"];
         if ( $this->_fm === null )
             $this->_fm = new FileMaker($this->db, $this->host, $this->username, $this->password);
     }
