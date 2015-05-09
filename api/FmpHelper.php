@@ -77,12 +77,14 @@ class FmpHelper extends Component {
     public $db = '';
     public $username = '';
     public $password = '';
+    public $uniqueSession = true;
     
     /** @var FileMaker */
     private $_fm;
     private $_layout;
     private $_valueLists = [];
     private $_scriptResult;
+    private $_cookie;
     
     public function __construct($config = []) {
         \Yii::configure($this, $config);
@@ -93,6 +95,20 @@ class FmpHelper extends Component {
     }
 
     private function initConnection() { 
+        if( $this->uniqueSession && file_exists(Yii::getAlias('@runtime').'/WPCSessionID')){
+            $this->_cookie = file_get_contents (Yii::getAlias('@runtime').'/WPCSessionID');
+            setcookie ('WPCSessionID', $this->_cookie) ;
+        }
+        $this->_cookie = $_COOKIE["WPCSessionID"];
+        if ( $this->_fm === null )
+            $this->_fm = new FileMaker($this->db, $this->host, $this->username, $this->password);
+    }
+
+    private function endConnection() { 
+        if( $this->uniqueSession && isset($_COOKIE["WPCSessionID"]) && $_COOKIE["WPCSessionID"] != $this->_cookie ){
+            file_put_contents(Yii::getAlias('@runtime').'/WPCSessionID', $_COOKIE["WPCSessionID"]) ;
+        }   
+        
         if ( $this->_fm === null )
             $this->_fm = new FileMaker($this->db, $this->host, $this->username, $this->password);
     }
@@ -117,6 +133,7 @@ class FmpHelper extends Component {
         Yii::trace("Script performed successfully in " . (microtime(true)-$t0), __NAMESPACE__ . __CLASS__);
         $record = $result->getFirstRecord();
         $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
+        $this->endConnection();
         return true;
     }
     
@@ -201,6 +218,7 @@ class FmpHelper extends Component {
         Yii::info('Get value list : '.$listName, 'airmoi\yii2fmconnector\api\FmpHelper::getValueList');
         $this->_valueLists[$listName] = $result;
         return $this->_valueLists[$listName];
+        $this->endConnection();
     }
     
     /**
