@@ -423,8 +423,9 @@ curl_setopt($Vd88fc6ed, CURLOPT_COOKIE, $V0fbf52c7);
 function _setClientWPCSessionCookie($Vd1fc8eaf)
  {
  $V81c939b1 = preg_match('/WPCSessionID=([^;]*);/m', $Vd1fc8eaf, $V6da3345e);
-if ($V81c939b1) {
+if ($V81c939b1 && @$_COOKIE['WPCSessionID'] != $V6da3345e[1]) { 
  setcookie("WPCSessionID", $V6da3345e[1]);
+ $_COOKIE['WPCSessionID'] = $V6da3345e[1];
 }
 }
 function _getContentLength($Vd1fc8eaf)

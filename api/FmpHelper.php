@@ -95,11 +95,13 @@ class FmpHelper extends Component {
     }
 
     private function initConnection() { 
-        if( $this->uniqueSession && file_exists(Yii::getAlias('@runtime').'/WPCSessionID')){
+         if( $this->uniqueSession && file_exists(Yii::getAlias('@runtime').'/WPCSessionID')){
             $this->_cookie = file_get_contents (Yii::getAlias('@runtime').'/WPCSessionID');
-            setcookie ('WPCSessionID', $this->_cookie) ;
+            if ( @$_COOKIE["WPCSessionID"] != $this->_cookie)  {
+            	setcookie ('WPCSessionID', $this->_cookie) ;
+            	$_COOKIE["WPCSessionID"] = $this->_cookie;
+       		}
         }
-        $this->_cookie = @$_COOKIE["WPCSessionID"];
         if ( $this->_fm === null )
             $this->_fm = new FileMaker($this->db, $this->host, $this->username, $this->password);
     }
@@ -108,9 +110,6 @@ class FmpHelper extends Component {
         if( $this->uniqueSession && isset($_COOKIE["WPCSessionID"]) && $_COOKIE["WPCSessionID"] != $this->_cookie ){
             file_put_contents(Yii::getAlias('@runtime').'/WPCSessionID', $_COOKIE["WPCSessionID"]) ;
         }   
-        
-        if ( $this->_fm === null )
-            $this->_fm = new FileMaker($this->db, $this->host, $this->username, $this->password);
     }
     
     public function performScript($scriptName, array $params){
