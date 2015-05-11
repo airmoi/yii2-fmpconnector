@@ -12,22 +12,8 @@ namespace airmoi\yii2fmconnector\api;
 
 use Yii;
 use yii\base\Component;
-use \FileMaker;
-use \FileMaker_Record;
-use \FileMaker_Layout;
-use \FileMaker_Command_Add;
-use \FileMaker_Command_CompoundFind; 
-use \FileMaker_Command_Delete;
-use \FileMaker_Command_Duplicate;
-use \FileMaker_Command_Edit;
-use \FileMaker_Command_FindAll;
-use \FileMaker_Command_FindAny;
-use \FileMaker_Command_Find;
-use \FileMaker_Command_FindRequest;
-use \FileMaker_Command_PerformScript;
-//use \FileMaker_Error;
-
-require_once dirname(__FILE__).'/FileMaker.php';
+use airmoi\FileMaker\FileMaker;
+use airmoi\FileMaker\FileMakerException;
 
 /**
  * This class provide access to FileMaker PHP-API
@@ -37,31 +23,34 @@ require_once dirname(__FILE__).'/FileMaker.php';
  * @since 1.0
  * 
  * 
- * @method FileMaker_Record createRecord($layout, $fieldValues = []) Creates a new FileMaker_Record object.
  * @method string getAPIVersion() Returns the version of the FileMaker API for PHP.
  * @method string getContainerData($url) Returns the data for the specified container field.
  * @method string getContainerDataURL($url) Returns the fully qualified URL for the specified container field.
- * @method FileMaker_Layout getLayout($layout) Returns the layout object.
  * @method string getMinServerVersion() Returns the minimum version of FileMaker Server that this API works with.
  * @method array getProperties() Returns an associative array of property name => property value for all current properties and their current values. 
- * @method FileMaker_Record|FileMaker_Error getRecordById($layout, $recordId) Returns a single FileMaker_Record object matching the given Layout or a FileMaker_Error
+ * 
  * @method boolean isError($variable) Tests whether a variable is a FileMaker API Error.
- * @method array|FileMaker_Error listDatabases() Returns an array of databases that are available
- * @method array|FileMaker_Error listLayouts() Returns an array of layouts from the current database
- * @method array|FileMaker_Error listScripts() Returns an array of scripts from the current database
- * @method FileMaker_Command_Add newAddCommand($layout, $values = array()) Creates a new FileMaker_Command_Add object.
  * 
- * @method FileMaker_Command_CompoundFind newCompoundFindCommand($layout) Creates a new FileMaker_Command_CompoundFind object.
- * @method FileMaker_Command_Delete newDeleteCommand($layout, $recordId) Creates a new FileMaker_Command_Delete object.
- * @method FileMaker_Command_Duplicate newDuplicateCommand($layout, $recordId) Creates a new FileMaker_Command_Duplicate object.
- * @method FileMaker_Command_Edit newEditCommand($layout, $recordId, $updatedValues = array()) Creates a new FileMaker_Command_Edit object.
- * @method FileMaker_Command_FindAll newFindAllCommand($layout) Creates a new FileMaker_Command_FindAll object.
+ * @method array listDatabases() Returns an array of databases that are available
+ * @method array listLayouts() Returns an array of layouts from the current database
+ * @method array listScripts() Returns an array of scripts from the current database
  * 
- * @method FileMaker_Command_FindAny newFindAnyCommand($layout) Creates a new FileMaker_Command_FindAny object.
- * @method FileMaker_Command_Find newFindCommand($layout) Creates a new FileMaker_Command_Find object.
- * @method FileMaker_Command_FindRequest newFindRequest($layout) Creates a new FileMaker_Command_FindRequest object.
- * @method FileMaker_Command_PerformScript newPerformScriptCommand($layout, $scriptName, $scriptParameters = null) Creates a new FileMaker_Command_PerformScript object.
- * @method Log setLogger($logger) Associates a PEAR Log object with the API for logging requests and responses.
+ * @method \airmoi\FileMaker\Object\Layout getLayout($layout) Returns the layout object.
+ * @method \airmoi\FileMaker\Object\Record createRecord($layout, $fieldValues = []) Creates a new FileMaker_Record object.
+ * 
+ * @method \airmoi\FileMaker\Command\Add newAddCommand($layout, $values = array()) Creates a new Add object.
+ * @method \airmoi\FileMaker\Command\CompoundFind newCompoundFindCommand($layout) Creates a new CompoundFind object.
+ * @method \airmoi\FileMaker\Command\Delete newDeleteCommand($layout, $recordId) Creates a new Delete object.
+ * @method \airmoi\FileMaker\Command\Duplicate newDuplicateCommand($layout, $recordId) Creates a new Duplicate object.
+ * @method \airmoi\FileMaker\Command\Edit newEditCommand($layout, $recordId, $updatedValues = array()) Creates a new Edit object.
+ * @method \airmoi\FileMaker\Command\FindAll newFindAllCommand($layout) Creates a new FindAll object.
+ * 
+ * @method \airmoi\FileMaker\Command\FindAny newFindAnyCommand($layout) Creates a new FindAny object.
+ * @method \airmoi\FileMaker\Command\Find newFindCommand($layout) Creates a new Find object.
+ * @method \airmoi\FileMaker\Command\FindRequest newFindRequest($layout) Creates a new FindRequest object.
+ * @method \airmoi\FileMaker\Command\PerformScript newPerformScriptCommand($layout, $scriptName, $scriptParameters = null) Creates a new PerformScript object.
+ * 
+ * 
  * @method null setProperty($prop, $value) Sets a property to a new value for all API calls.
  */
 class FmpHelper extends Component {
@@ -113,27 +102,28 @@ class FmpHelper extends Component {
     }
     
     public function performScript($scriptName, array $params){
-        $this->initConnection();
-        $scriptParameters = "";
-        foreach ($params as $name => $value){
-           $scriptParameters .= "<".$name.">".$value."</".$name.">";
+        try {
+            $this->initConnection();
+            $scriptParameters = "";
+            foreach ($params as $name => $value){
+               $scriptParameters .= "<".$name.">".$value."</".$name.">";
+            }
+            Yii::trace("Performing script $scriptName with params $scriptParameters", __NAMESPACE__ . __CLASS__);
+            $t0 = microtime(true);
+            $cmd = $this->_fm->newPerformScriptCommand($this->resultLayout, $scriptName, $scriptParameters);        
+            $result = $cmd->execute();
+       
+            Yii::trace("Script performed successfully in " . (microtime(true)-$t0), __NAMESPACE__ . __CLASS__);
+            $record = $result->getFirstRecord();
+            $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
+            $this->endConnection();
+            return true;
         }
-        Yii::trace("Performing script $scriptName with params $scriptParameters", __NAMESPACE__ . __CLASS__);
-        $t0 = microtime(true);
-        $cmd = $this->_fm->newPerformScriptCommand($this->resultLayout, $scriptName, $scriptParameters);
-        
-        $result = $cmd->execute();
-        if (FileMaker::isError($result))
-        {
-            Yii::error("Script error : ". $result->getCode() . ' ' . $result->getMessage(), __NAMESPACE__ . __CLASS__);
-            $this->_scriptResult = '<'.$this->errorTag.'>'.$result->getCode().'</'.$this->errorTag.'><'.$this->errorDescriptionTag.'>'.$result->getMessage().'</'.$this->errorDescriptionTag.'>';
+        catch ( FileMakerException $e ) {
+            Yii::error("Script error : ". $e->getCode() . ' ' . $e->getMessage(), __NAMESPACE__ . __CLASS__);
+            $this->_scriptResult = '<'.$this->errorTag.'>'.$e->getCode().'</'.$this->errorTag.'><'.$this->errorDescriptionTag.'>'.$e->getMessage().'</'.$this->errorDescriptionTag.'>';
             return false;
         }
-        Yii::trace("Script performed successfully in " . (microtime(true)-$t0), __NAMESPACE__ . __CLASS__);
-        $record = $result->getFirstRecord();
-        $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
-        $this->endConnection();
-        return true;
     }
     
     /**
@@ -197,27 +187,25 @@ class FmpHelper extends Component {
        return self::xmlget($this->_scriptResult, $this->scriptResultTag);
     }
     
-    public function getValueList($listName){    
-        $this->initConnection();
-        if ( isset ( $this->_valueLists[$listName]))
-            return $this->_valueLists[$listName];
-        
-        if ( $this->_layout === null) {
-            $this->_layout = $this->_fm->getLayout($this->valueListLayout);
-            if ( self::isError($this->_layout)) {
-                Yii::error('Error getting layout : '.$this->valueListLayout. '('.$this->_layout->getMessage().')', 'airmoi\yii2fmconnector\api\FmpHelper::getValueList');
-                return [];
+    public function getValueList($listName){ 
+        try {
+            $this->initConnection();
+            if ( isset ( $this->_valueLists[$listName]))
+                return $this->_valueLists[$listName];
+
+            if ( $this->_layout === null) {
+                $this->_layout = $this->_fm->getLayout($this->valueListLayout);
             }
+            $result = $this->_layout->getValueListTwoFields($listName);
+            Yii::info('Get value list : '.$listName, 'airmoi\yii2fmconnector\api\FmpHelper::getValueList');
+            $this->_valueLists[$listName] = $result;
+            $this->endConnection();
+            return $this->_valueLists[$listName];
         }
-        $result = $this->_layout->getValueListTwoFields($listName);
-        if ( FileMaker::isError($result)) {
-            Yii::error('Error getting value list : '.$listName. '('.$result->getMessage().')', 'airmoi\yii2fmconnector\api\FmpHelper::getValueList');
+        catch ( airmoi\FileMaker\FileMakerException $e ){
+            Yii::error('Error getting value list "'.$listName. '" ('.$e->getMessage().')', __METHOD__);
             return [];
         }
-        Yii::info('Get value list : '.$listName, 'airmoi\yii2fmconnector\api\FmpHelper::getValueList');
-        $this->_valueLists[$listName] = $result;
-        return $this->_valueLists[$listName];
-        $this->endConnection();
     }
     
     /**
