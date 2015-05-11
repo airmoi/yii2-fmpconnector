@@ -74,6 +74,7 @@ return [
     ]
 ];
 ```
+
 0. PHP-API
 
 add and customize this lines into the components section of your config file
@@ -97,6 +98,27 @@ add and customize this lines into the components section of your config file
 ...
 ```
 
-Acces FileMaker API using
+Acces FileMaker API using fmhelper component
 ```php
-<?php Yii::$app->fmhelper
+<?php 
+Yii::$app->fmhelper
+?>```
+
+0. Customize gii
+
+Add these lines to gii module config to enhance model & CRUD generators
+```php
+'generators' => [
+                    'model' => [
+                        'class' => 'yii\gii\generators\model\Generator',
+                        'templates' => [
+                            'FileMaker' => '@app/vendor/airmoi/yii2-fmconnector/gii/templates/',
+                        ]
+                    ],
+                     'crud' => [ // generator name
+                        'class' => 'airmoi\yii2fmconnector\gii\crud\Generator', // generator class
+                    ]
+                ],
+        ];
+```
+
