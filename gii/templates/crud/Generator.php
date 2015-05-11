@@ -79,7 +79,7 @@ class Generator extends \yii\gii\generators\crud\Generator
         
         $models = [];
         foreach ( $tableSchema->foreignKeys as $relation) {
-            $models[] = "use app\models\\" . Inflector::id2camel($relation[0], '_');
+            $models[] = "use app\models\\" . Inflector::id2camel($relation[0], '_').';';
         }
         return implode ( "\r\n", $models);
     }
