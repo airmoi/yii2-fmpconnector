@@ -251,7 +251,7 @@ class Schema extends \yii\db\Schema
              $this->parseSchema();
          
          foreach ( $this->_tables as $tableName => $infos ){
-             if ( preg_match('/^'.$XXX.'_/', $tableName))
+             if ( strtolower($XXX) == strtolower($tableName) || preg_match('/^'.$XXX.'_/', $tableName))
                  return [$infos['tables'][0]];
          }
          return [];
