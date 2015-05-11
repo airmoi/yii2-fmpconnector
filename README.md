@@ -25,6 +25,7 @@ to the require section of your `composer.json` file.
 Usage
 -----
 1. ODBC connection
+
 Once plugin installed using composer, and ODBC driver configured on the server,
 Create/Edit your db config file using this lines
 ```php
@@ -74,6 +75,7 @@ return [
 ];
 ```
 2. PHP-API
+
 add and customize this lines into the components section of your config file
 
 ```
