@@ -50,7 +50,7 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
         foreach ( $tableSchema->foreignKeys as $relation) {
                 if ( array_key_exists($column->name, $relation)) {
                     $isFK = true;
-                    continue;
+                    break;
                 }
             }
         if ( $isFK ) {
