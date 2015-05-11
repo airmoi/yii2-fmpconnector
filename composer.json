@@ -12,7 +12,7 @@
     ],
     "require": {
         "yiisoft/yii2": "*",
-        "airmoi/FileMaker": "*"
+        "airmoi/filemaker": "*"
     },
     "autoload": {
         "psr-4": {
