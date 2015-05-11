@@ -20,6 +20,7 @@ class Schema extends \yii\db\Schema
 {
     public $ignoreFields = [];
     
+    public $defaultPrimaryKey = 'zkp';
     public $primaryKeyPattern = '/^zkp[_]?/';
     
     /**
@@ -240,7 +241,7 @@ class Schema extends \yii\db\Schema
             if ( preg_match($this->foreignKeyPattern, $c->name, $matches)) { 
                 $XXX = $this->getTableNameFromXXX($matches[2]);
                 if ( sizeof ($XXX) )
-                    $table->foreignKeys[] = [$XXX[0],   $c->name => "zkp"];
+                    $table->foreignKeys[] = [$XXX[0],   $c->name => $this->defaultPrimaryKey];
             }
         }
     }
