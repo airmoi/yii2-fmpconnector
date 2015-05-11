@@ -19,6 +19,17 @@ use yii;
 class Schema extends \yii\db\Schema
 {
     public $ignoreFields = [];
+    
+    public $primaryKeyPattern = '/^zkp[_]?/';
+    
+    /**
+     * Pattern used to detect if a field is a foreign keys field
+     * second match pattern must return a table trigram (XXX) 
+     * 
+     * @var string 
+     */
+    public $foreignKeyPattern = '/^(zkf|zkp)_([^_]*).*/';
+    
     /**
      * @var array mapping from physical column types (keys) to abstract column types (values)
      */
@@ -31,6 +42,9 @@ class Schema extends \yii\db\Schema
         'binary' => self::TYPE_BINARY,
 
     ];
+    
+    private $_tables = [];
+    
     
      /**
      * Quotes a string value for use in a query.
@@ -119,15 +133,23 @@ class Schema extends \yii\db\Schema
      * @param TableSchema $table the table metadata object
      * @param string $name the table name
      */
-    protected function resolveTableNames($table, $name)
+    protected function resolveTableNames( TableSchema $table, $name)
     {
         /*
         * get first available TO name
         */
-       $sql="SELECT TableName FROM FileMaker_Tables WHERE BaseTableName='$name' or TableName='$name'";
-       $tablename = $this->db->createCommand($sql)->queryColumn();
-            $table->name = $name;
-            $table->fullName = $tablename[0];
+        if ( sizeof( $this->_tables ) == 0 )
+             $this->parseSchema();
+        
+        foreach ( $this->_tables as $tableName => $infos){
+            if ( $tableName == $name or array_search($name, $infos['tables']) !== false){
+                $table->name = $name;
+                $table->fullName = $infos['tables'][0];
+                $table->baseTableName = $tableName;
+                return $infos['tables'][0];
+            }
+        }
+        return [];
     }
 
     /**
@@ -142,7 +164,8 @@ class Schema extends \yii\db\Schema
         $column->name = $info['FieldName'];
         $column->allowNull = true;
         $column->dbType = $info['FieldType'];
-        $column->isPrimaryKey = substr($column->name, 0, 3)=="zkp"; 
+        //$column->isPrimaryKey = substr($column->name, 0, 3)=="zkp"; 
+        $column->isPrimaryKey = preg_match($this->primaryKeyPattern, $column->name); 
         //$column->autoIncrement = $info['is_identity'] == 1;
         $column->unsigned = false;
         $column->comment = "";
@@ -168,27 +191,15 @@ class Schema extends \yii\db\Schema
      * @param TableSchema $table the table metadata
      * @return boolean whether the table exists in the database
      */
-    protected function findColumns($table)
+    protected function findColumns(TableSchema $table)
     {
         /*
         * Ignore Global and summary fields
         */
-        $sql="SELECT * FROM FileMaker_Fields WHERE TableName = '".$table->fullName."' ";
         
-        foreach ( $this->ignoreFields as $type => $patterns ){
-            foreach ( $patterns as $pattern ) {
-                $sql .= "AND $type NOT LIKE '$pattern' ";
-            }
-        };
-
-        try {
-            $columns = $this->db->createCommand($sql)->queryAll();
-            if (empty($columns)) {
+        $columns = $this->_tables[$table->baseTableName]['fields'];
+        if ( sizeof( $columns ) == 0)
                 return false;
-            }
-        } catch (\Exception $e) {
-            return false;
-        }
         foreach ($columns as $column) {
             $column = $this->loadColumnSchema($column);
             $table->columns[$column->name] = $column;
@@ -196,7 +207,6 @@ class Schema extends \yii\db\Schema
                 $table->primaryKey[] = $column->name;
             }
         }
-
         return true;
     }
 
@@ -207,10 +217,10 @@ class Schema extends \yii\db\Schema
      */
     protected function findTableNames($schema = '')
     {
-        $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables WHERE BaseTableName IS NOT NULL";
-        $tempResult = $this->db->createCommand($sql)->queryColumn();
-        $result = array_values(array_unique($tempResult));
-        return $result;
+        if( sizeof( $this->_tables ) == 0) {
+            $this->parseSchema();
+        }
+        return array_keys($this->_tables);
     }
     
     /**
@@ -220,8 +230,9 @@ class Schema extends \yii\db\Schema
     protected function findConstraints($table)
     {
         foreach ( $table->columns as $c) {
-            if ( substr($c->name, 0, 3)=="zkf" || substr($c->name, 0, 4)=="zkp_") { 
-                $XXX = $this->getTableNameFromXXX(preg_replace('/(zkf|zkp)_([^_]*).*/', "$2", $c->name));
+            //if ( substr($c->name, 0, 3)=="zkf" || substr($c->name, 0, 4)=="zkp_") { 
+            if ( preg_match($this->foreignKeyPattern, $c->name, $matches)) { 
+                $XXX = $this->getTableNameFromXXX($matches[2]);
                 if ( sizeof ($XXX) )
                     $table->foreignKeys[] = [$XXX[0],   $c->name => "zkp"];
             }
@@ -229,8 +240,14 @@ class Schema extends \yii\db\Schema
     }
     
      protected function getTableNameFromXXX($XXX) {
-         $sql="SELECT DISTINCT(BaseTableName) FROM FileMaker_Tables WHERE BaseTableName LIKE '$XXX\_%'";
-         return $this->db->createCommand($sql)->queryColumn();
+         if ( sizeof( $this->_tables ) == 0 )
+             $this->parseSchema();
+         
+         foreach ( $this->_tables as $tableName => $infos ){
+             if ( preg_match('/^'.$XXX.'_/', $tableName))
+                 return [$infos['tables'][0]];
+         }
+         return [];
      }
      
      /**
@@ -273,6 +290,60 @@ class Schema extends \yii\db\Schema
     protected function createColumnSchema()
     {
         return Yii::createObject('airmoi\yii2fmconnector\db\ColumnSchema');
+    }
+    
+    /**
+     * @return boolean TRUE on success
+     * @throws \yii\base\InvalidConfigException
+     */
+    protected function parseSchema()
+    {
+        $this->_tables = [];
+        
+        /* Store Tables */
+        $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables WHERE BaseTableName IS NOT NULL";
+        $tables = $this->db->createCommand($sql)->cache($this->db->schemaCacheDuration)->queryAll();
+        foreach ( $tables as $table ) {
+            if ( !isset( $this->_tables [$table['BaseTableName']]))
+                $this->_tables [$table['BaseTableName']] = ['tables'=>[], 'fields'=>[]];
+            $this->_tables [$table['BaseTableName']]['tables'][] = $table['TableName'];
+            asort($this->_tables [$table['BaseTableName']]['tables']);
+        }
+        
+        /* Store Fields */
+        $sql="SELECT * FROM FileMaker_Fields";
+        $conditions = [];
+        foreach ( $this->ignoreFields as $type => $patterns ){
+            foreach ( $patterns as $pattern ) {
+                $conditions[] = "$type NOT LIKE '$pattern' ";
+            }
+        };
+        
+        if ( sizeof($conditions)>0)
+            $sql .= ' WHERE '.implode (' AND ', $conditions );
+        try {
+            $columns = $this->db->createCommand($sql)->cache($this->db->schemaCacheDuration)->queryAll();
+            if (empty($columns)) {
+                return false;
+            }
+        } catch (\Exception $e) {
+            return false;
+        }
+        foreach ($columns as $column) {
+            /* Find BaseTable Name */
+            foreach ( $this->_tables as $baseTableName => $infos )
+            {
+                if ( array_search($column['TableName'], $infos['tables']) !== false){
+                    break; 
+                }
+            }
+            if( array_key_exists($column['FieldName'],  $this->_tables[$baseTableName]['fields']))
+                    continue;
+            
+            $this->_tables[$baseTableName]['fields'][$column['FieldName']] = $column;
+        }
+        
+        return true;
     }
     
 }

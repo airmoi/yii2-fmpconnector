@@ -15,4 +15,5 @@ namespace airmoi\yii2fmconnector\db;
  */
 class TableSchema extends \yii\db\TableSchema
 {
+    public $baseTableName;
 }
