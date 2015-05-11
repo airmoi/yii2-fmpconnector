@@ -102,7 +102,8 @@ Acces FileMaker API using fmhelper component
 ```php
 <?php 
 Yii::$app->fmhelper
-?>```
+?>
+```
 
 0. Customize gii
 
