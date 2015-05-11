@@ -45,6 +45,12 @@ class Schema extends \yii\db\Schema
     
     private $_tables = [];
     
+    /**
+     * Store BaseTableName for each table occurrence ton improve parsing speed
+     * @var array 
+     */
+    private $_tableMap = [];
+    
     
      /**
      * Quotes a string value for use in a query.
@@ -298,16 +304,23 @@ class Schema extends \yii\db\Schema
      */
     protected function parseSchema()
     {
+        \Yii::trace('Caching DB schema', __METHOD__);
         $this->_tables = [];
         
         /* Store Tables */
         $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables WHERE BaseTableName IS NOT NULL";
         $tables = $this->db->createCommand($sql)->cache($this->db->schemaCacheDuration)->queryAll();
         foreach ( $tables as $table ) {
+            $this->_tableMap[$table['TableName']] = $table['BaseTableName'];
             if ( !isset( $this->_tables [$table['BaseTableName']]))
                 $this->_tables [$table['BaseTableName']] = ['tables'=>[], 'fields'=>[]];
             $this->_tables [$table['BaseTableName']]['tables'][] = $table['TableName'];
-            asort($this->_tables [$table['BaseTableName']]['tables']);
+            //asort($this->_tables [$table['BaseTableName']]['tables']);
+        }
+        $TOs = [];
+        foreach ( $this->_tables as $baseTableName => $infos ){
+            asort($this->_tables [$baseTableName]['tables']);
+            $TOs[] = $this->_tables [$baseTableName]['tables'][0];
         }
         
         /* Store Fields */
@@ -321,28 +334,36 @@ class Schema extends \yii\db\Schema
         
         if ( sizeof($conditions)>0)
             $sql .= ' WHERE '.implode (' AND ', $conditions );
+        
+        /* Limit to each Table's main Occurrences */
+        $sql .= " AND TableName IN('".implode("', '", $TOs)."')";
+        
         try {
             $columns = $this->db->createCommand($sql)->cache($this->db->schemaCacheDuration)->queryAll();
             if (empty($columns)) {
+            \Yii::error('Schema cache fail : No columns found', __METHOD__ );
                 return false;
             }
         } catch (\Exception $e) {
+            \Yii::error('Schema cache fail : ' . $e->getMessage(), __METHOD__ );
             return false;
         }
         foreach ($columns as $column) {
             /* Find BaseTable Name */
-            foreach ( $this->_tables as $baseTableName => $infos )
+            /*foreach ( $this->_tables as $baseTableName => $infos )
             {
                 if ( array_search($column['TableName'], $infos['tables']) !== false){
                     break; 
                 }
-            }
+            }*/
+            $baseTableName = $this->_tableMap[$column['TableName']];
             if( array_key_exists($column['FieldName'],  $this->_tables[$baseTableName]['fields']))
-                    continue;
+                continue;
             
             $this->_tables[$baseTableName]['fields'][$column['FieldName']] = $column;
         }
         
+        \Yii::trace('Db schema cache done', __METHOD__ );
         return true;
     }
     
