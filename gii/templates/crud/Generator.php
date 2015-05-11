@@ -65,4 +65,22 @@ class Generator extends \yii\gii\generators\crud\Generator
             }
         }
     }
+    
+    /**
+     * Generates code namespaces potentially used in views (related models)
+     * @return string
+     */
+    public function generateNamespaces()
+    {
+        $tableSchema = $this->getTableSchema();
+        if ($tableSchema === false) {
+            return ;
+        }
+        
+        $models = [];
+        foreach ( $tableSchema->foreignKeys as $relation) {
+            $models[] = "use app\models\\" . Inflector::id2camel($relation[0], '_');
+        }
+        return implode ( "\r\n", $models);
+    }
 }
