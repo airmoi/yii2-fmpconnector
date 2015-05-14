@@ -368,4 +368,16 @@ class Schema extends \yii\db\Schema
         return true;
     }
     
+    /**
+     * Array of columns indexed by fieldName present in specfied table
+     * @param string $tableName
+     * @return ColumnSchema[]
+     */
+    public function listFields($tableName){
+        if ( sizeof( $this->_tables ) == 0 )
+             $this->parseSchema();
+         
+        return $this->_tables[$this->_tableMap[$tableName]]['fields'];
+        
+    }
 }
