@@ -172,8 +172,12 @@ class Schema extends \yii\db\Schema
         $column->allowNull = true;
         $column->dbType = $info['FieldType'];
         //$column->isPrimaryKey = substr($column->name, 0, 3)=="zkp"; 
-        $column->isPrimaryKey = preg_match($this->primaryKeyPattern, $column->name); 
-        //$column->autoIncrement = $info['is_identity'] == 1;
+        $column->isPrimaryKey = preg_match($this->primaryKeyPattern, $column->name);
+        /**
+         * Hack to prevent field edition on calculated fields (will be ignored in generated rules)
+         */
+        if( $column->isPrimaryKey || $info['FieldClass'] == 'Calculated')
+            $column->autoIncrement = 1;
         $column->unsigned = false;
         $column->comment = "";
         
@@ -379,5 +383,48 @@ class Schema extends \yii\db\Schema
          
         return $this->_tables[$this->_tableMap[$tableName]]['fields'];
         
+    }
+    
+    /**
+     * Returns the ID of the last inserted row or sequence value.
+     * @param string $sequenceName name of the sequence object (required by some DBMS)
+     * @return string the row ID of the last row inserted, or the last value retrieved from the sequence object
+     * @throws InvalidCallException if the DB connection is not active
+     * @see http://www.php.net/manual/en/function.PDO-lastInsertId.php
+     */
+    public function getLastInsertID($sequenceName = '')
+    {
+        if ( empty($sequenceName) )
+                return null;
+        
+        $tableSchema = $this->getTableSchema($sequenceName);
+        if ($this->db->isActive) {
+            $id = $this->db->createCommand("SELECT MAX(".$tableSchema->primaryKey[0].") FROM $sequenceName")->queryColumn();
+            return $this->db->createCommand("SELECT MAX(".$tableSchema->primaryKey[0].") FROM $sequenceName")->queryColumn()[0];
+            
+        } else {
+            throw new InvalidCallException('DB Connection is not active.');
+        }
+    }
+    
+    /**
+     * Executes the INSERT command, returning primary key values.
+     * @param string $table the table that new rows will be inserted into.
+     * @param array $columns the column data (name => value) to be inserted into the table.
+     * @return array primary key values or false if the command fails
+     * @since 2.0.4
+     */
+    public function insert($table, $columns)
+    {
+        $command = $this->db->createCommand()->insert($table, $columns);
+        if (!$command->execute()) {
+            return false;
+        }
+        $tableSchema = $this->getTableSchema($table);
+        $result = [];
+        foreach ($tableSchema->primaryKey as $name) {  
+                $result[$name] = $this->getLastInsertID($table);
+        }
+        return $result;
     }
 }
