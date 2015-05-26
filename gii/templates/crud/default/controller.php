@@ -143,6 +143,41 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
 
         return $this->redirect(['index']);
     }
+    
+    /**
+     * Return Container file according to its mime type (.
+     * If deletion is successful, the browser will be redirected to the 'index' page.
+     * @param string $id record ID (from premary key, not internal FileMaker ID)
+     * @param string $field The fieldName to retrieve as container
+     * @return mixed
+     */
+    public function actionContainer($id, $field)
+    {
+        /**
+         * get file name
+         * (For an osbcure reason, FileMaker can't cast a Container as Varchar & as binary in the same query)
+         */
+        $query = Intervenants::find($id);
+        $query->select(['CAST('.$field.' AS VARCHAR) as filename']);
+        $query->where([<?= $modelClass ?>::primaryKey()[0] => $id]);
+        $fileName = $query->asArray()->one()['filename'];
+        
+        /**
+         * get file binary
+         */
+        $query = <?= $modelClass ?>::find($id);
+        $query->select(['GETAS('.$field.',DEFAULT) as container']);
+        $query->where([<?= $modelClass ?>::primaryKey()[0] => $id]);
+        $container = $query->asArray()->one()['container'];
+        
+        /**
+         * Render File according to its mime type
+         */
+        \Yii::$app->response->format = \yii\web\Response::FORMAT_RAW;
+        header('Content-Type: '.\airmoi\yii2fmconnector\api\FmpHelper::mime_content_type($fileName));
+        echo $container;
+        Yii::$app->end();
+    }
 
     /**
      * Finds the <?= $modelClass ?> model based on its primary key value.

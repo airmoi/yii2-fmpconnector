@@ -75,14 +75,14 @@ class Schema extends \yii\db\Schema
             return "{ts '$str'}";
         if ( preg_match('/^\d{2}:\d{2}:\d{2}$/', $str))
             return "{t '$str'}";
-         if ( preg_match('/^••varchar••(.*)/', $str, $match))
+         if ( preg_match('/^••varchar••(.*)/s', $str, $match))
                 $str = $match[1];
         if ( preg_match('/^••decimal••(.*)/', $str, $match))
                 return $match[1];
         
         // the driver doesn't support quote (e.g. oci)
-        return "'" . addslashes(str_replace("'", "\'", $str)) . "'";
- 
+        //return "'" . addslashes(str_replace("'", "\'", $str)) . "'";
+        return "'" . str_replace("'", "''", $str) . "'";
     }
 
     /**
@@ -174,9 +174,9 @@ class Schema extends \yii\db\Schema
         //$column->isPrimaryKey = substr($column->name, 0, 3)=="zkp"; 
         $column->isPrimaryKey = preg_match($this->primaryKeyPattern, $column->name);
         /**
-         * Hack to prevent field edition on calculated fields (will be ignored in generated rules)
+         * Dirty hack to prevent field edition on calculated / conatiners fields (will be ignored in generated rules)
          */
-        if( $column->isPrimaryKey || $info['FieldClass'] == 'Calculated')
+        if( $column->isPrimaryKey || $info['FieldClass'] == 'Calculated' || $info['FieldType'] == 'binary')
             $column->autoIncrement = 1;
         $column->unsigned = false;
         $column->comment = "";

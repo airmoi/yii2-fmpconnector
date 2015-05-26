@@ -57,7 +57,6 @@ class QueryBuilder extends \yii\db\QueryBuilder {
             $schema = $this->db->getSchema();
             //$tables = $this->qu
             foreach ( $query->from as $i => $table){
-                
                 foreach ( $schema->listFields($table) as $fieldName => $column ){
                     if ( $column['FieldType'] == 'binary'){ //Cast containers as text to retrieve names
                         $query->select[] = "CAST($fieldName AS VARCHAR) as $fieldName";
