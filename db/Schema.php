@@ -311,7 +311,7 @@ class Schema extends \yii\db\Schema
         }
         
         /* Store Fields */
-        $sql="SELECT * FROM FileMaker_Fields";
+        $sql="SELECT * FROM FileMaker_Fields ORDER BY TableName, FieldName";
         $conditions = [];
         foreach ( $this->ignoreFields as $type => $patterns ){
             foreach ( $patterns as $pattern ) {
