@@ -198,7 +198,7 @@ class FmpHelper extends Component {
             }
             $result = $this->_layout->getValueListTwoFields($listName);
             Yii::info('Get value list : '.$listName, 'airmoi\yii2fmconnector\api\FmpHelper::getValueList');
-            $this->_valueLists[$listName] = $result;
+            $this->_valueLists[$listName] = array_flip ( $result );
             $this->endConnection();
             return $this->_valueLists[$listName];
         }
