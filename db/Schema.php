@@ -341,7 +341,7 @@ class Schema extends \yii\db\Schema
             $sql .= ' WHERE '.implode (' AND ', $conditions );
         
         /* Limit to each Table's main Occurrences */
-        $sql .= " AND TableName IN('".implode("', '", $TOs)."')";
+        $sql .= " AND TableName IN('".implode("', '", $TOs)."') ORDER BY TableName, FieldName";
         
         try {
             $columns = $this->db->createCommand($sql)->cache($this->db->schemaCacheDuration)->queryAll();
