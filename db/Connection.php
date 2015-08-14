@@ -17,8 +17,12 @@ namespace airmoi\yii2fmconnector\db;
 
 class Connection extends \yii\db\Connection
 {
+    
+
      public $schemaMap = [
-        'fmp' => 'airmoi\yii2fmconnector\db\Schema', // FileMaker ODBC
+        'fmp' => [
+            'class' => 'airmoi\yii2fmconnector\db\Schema',
+            ]// FileMaker ODBC
        
     ];
      

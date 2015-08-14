@@ -53,9 +53,27 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
     foreach ($tableSchema->columns as $column) {
         $format = $generator->generateColumnFormat($column);
         if (++$count < 6) {
-            echo "            '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+            if ($column->dbType == 'binary') {
+                echo "            [\n"
+                   . "              'attribute' => '".$column->name."',\n"
+                   . "              'format' => 'image',\n"
+                   . "              'value' => function(\$model){ return yii\helpers\Url::to(['container', 'id' => \$model->".$tableSchema->primaryKey[0].", 'field' => '".$column->name."']);},\n"
+                   ."            ],\n";
+            }
+            else {
+                echo "            '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+            }
         } else {
-            echo "            // '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+            if ($column->dbType == 'binary') {
+                echo "           // [\n"
+                   . "           //   'attribute' => '".$column->name."',\n"
+                   . "           //   'format' => 'image',\n"
+                   . "           //   'value' => function(\$model){ return yii\helpers\Url::to(['container', 'id' => \$model->".$tableSchema->primaryKey[0].", 'field' => '".$column->name."']);},\n"
+                   ."            // ],\n";
+            }
+            else {
+                echo "            // '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+            }
         }
     }
 }

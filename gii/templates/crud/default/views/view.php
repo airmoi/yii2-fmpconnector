@@ -46,8 +46,27 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
     }
 } else {
     foreach ($generator->getTableSchema()->columns as $column) {
-        $format = $generator->generateColumnFormat($column);
-        echo "            '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+        $isFK = false;
+        foreach ( $tableSchema->foreignKeys as $relation) {
+                if ( array_key_exists($column->name, $relation)) {
+                    $isFK = true;
+                    break;
+                }
+            }
+        if ( $isFK ) {
+            echo "            '" . lcfirst(Inflector::id2camel(array_keys($relation)[1], '_')).".label". "',\n";
+        } 
+        elseif ($column->dbType == 'binary') {
+            echo "            [\n"
+               . "              'attribute' => '".$column->name."',\n"
+               . "              'format' => 'image',\n"
+               . "              'value' => yii\helpers\Url::to(['container', 'id' => \$model->".$tableSchema->primaryKey[0].", 'field' => '".$column->name."']),\n"
+               ."            ],\n";
+        }
+        else {
+            $format = $generator->generateColumnFormat($column);
+            echo "            '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+        }
     }
 }
 ?>

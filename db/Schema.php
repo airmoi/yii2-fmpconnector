@@ -18,6 +18,19 @@ use yii;
  */
 class Schema extends \yii\db\Schema
 {
+    public $ignoreFields = [];
+    
+    public $defaultPrimaryKey = 'zkp';
+    public $primaryKeyPattern = '/^zkp[_]?/';
+    
+    /**
+     * Pattern used to detect if a field is a foreign keys field
+     * second match pattern must return a table trigram (XXX) 
+     * 
+     * @var string 
+     */
+    public $foreignKeyPattern = '/^(zkf|zkp)_([^_]*).*/';
+    
     /**
      * @var array mapping from physical column types (keys) to abstract column types (values)
      */
@@ -30,6 +43,15 @@ class Schema extends \yii\db\Schema
         'binary' => self::TYPE_BINARY,
 
     ];
+    
+    private $_tables = [];
+    
+    /**
+     * Store BaseTableName for each table occurrence ton improve parsing speed
+     * @var array 
+     */
+    private $_tableMap = [];
+    
     
      /**
      * Quotes a string value for use in a query.
@@ -53,14 +75,14 @@ class Schema extends \yii\db\Schema
             return "{ts '$str'}";
         if ( preg_match('/^\d{2}:\d{2}:\d{2}$/', $str))
             return "{t '$str'}";
-         if ( preg_match('/^••varchar••(.*)/', $str, $match))
+         if ( preg_match('/^••varchar••(.*)/s', $str, $match))
                 $str = $match[1];
         if ( preg_match('/^••decimal••(.*)/', $str, $match))
                 return $match[1];
         
         // the driver doesn't support quote (e.g. oci)
-        return "'" . addslashes(str_replace("'", "\'", $str)) . "'";
- 
+        //return "'" . addslashes(str_replace("'", "\'", $str)) . "'";
+        return "'" . str_replace("'", "''", $str) . "'";
     }
 
     /**
@@ -118,15 +140,23 @@ class Schema extends \yii\db\Schema
      * @param TableSchema $table the table metadata object
      * @param string $name the table name
      */
-    protected function resolveTableNames($table, $name)
+    protected function resolveTableNames( TableSchema $table, $name)
     {
         /*
         * get first available TO name
         */
-       $sql="SELECT TableName FROM FileMaker_Tables WHERE BaseTableName='$name' or TableName='$name'";
-       $tablename = $this->db->createCommand($sql)->queryColumn();
-            $table->name = $name;
-            $table->fullName = $tablename[0];
+        if ( sizeof( $this->_tables ) == 0 )
+             $this->parseSchema();
+        
+        foreach ( $this->_tables as $tableName => $infos){
+            if ( $tableName == $name or array_search($name, $infos['tables']) !== false){
+                $table->name = $name;
+                $table->fullName = $infos['tables'][0];
+                $table->baseTableName = $tableName;
+                return $infos['tables'][0];
+            }
+        }
+        return [];
     }
 
     /**
@@ -141,8 +171,13 @@ class Schema extends \yii\db\Schema
         $column->name = $info['FieldName'];
         $column->allowNull = true;
         $column->dbType = $info['FieldType'];
-        $column->isPrimaryKey = substr($column->name, 0, 3)=="zkp"; 
-        //$column->autoIncrement = $info['is_identity'] == 1;
+        //$column->isPrimaryKey = substr($column->name, 0, 3)=="zkp"; 
+        $column->isPrimaryKey = preg_match($this->primaryKeyPattern, $column->name);
+        /**
+         * Dirty hack to prevent field edition on calculated / conatiners fields (will be ignored in generated rules)
+         */
+        if( $column->isPrimaryKey || $info['FieldClass'] == 'Calculated' || $info['FieldType'] == 'binary')
+            $column->autoIncrement = 1;
         $column->unsigned = false;
         $column->comment = "";
         
@@ -167,28 +202,15 @@ class Schema extends \yii\db\Schema
      * @param TableSchema $table the table metadata
      * @return boolean whether the table exists in the database
      */
-    protected function findColumns($table)
+    protected function findColumns(TableSchema $table)
     {
         /*
         * Ignore Global and summary fields
         */
-        $sql="SELECT * FROM FileMaker_Fields WHERE TableName = '".$table->fullName."' "
-                . "AND FieldType NOT LIKE 'global%' "
-                . "AND FieldClass NOT LIKE 'Summary' " 
-                . "AND FieldName NOT LIKE 'zkk_%' "
-                . "AND FieldName NOT LIKE 'zgi_%' "
-                . "AND FieldName NOT LIKE 'zzz_%' "
-                . "AND FieldName NOT LIKE 'z_foundCount_cU' "
-                . "AND FieldName NOT LIKE 'z_listOf_eval_cU'";
-
-        try {
-            $columns = $this->db->createCommand($sql)->queryAll();
-            if (empty($columns)) {
+        
+        $columns = $this->_tables[$table->baseTableName]['fields'];
+        if ( sizeof( $columns ) == 0)
                 return false;
-            }
-        } catch (\Exception $e) {
-            return false;
-        }
         foreach ($columns as $column) {
             $column = $this->loadColumnSchema($column);
             $table->columns[$column->name] = $column;
@@ -196,7 +218,6 @@ class Schema extends \yii\db\Schema
                 $table->primaryKey[] = $column->name;
             }
         }
-
         return true;
     }
 
@@ -207,10 +228,10 @@ class Schema extends \yii\db\Schema
      */
     protected function findTableNames($schema = '')
     {
-        $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables WHERE BaseTableName IS NOT NULL";
-        $tempResult = $this->db->createCommand($sql)->queryColumn();
-        $result = array_values(array_unique($tempResult));
-        return $result;
+        if( sizeof( $this->_tables ) == 0) {
+            $this->parseSchema();
+        }
+        return array_keys($this->_tables);
     }
     
     /**
@@ -220,17 +241,24 @@ class Schema extends \yii\db\Schema
     protected function findConstraints($table)
     {
         foreach ( $table->columns as $c) {
-            if ( substr($c->name, 0, 3)=="zkf" || substr($c->name, 0, 4)=="zkp_") { 
-                $XXX = $this->getTableNameFromXXX(preg_replace('/(zkf|zkp)_([^_]*).*/', "$2", $c->name));
+            //if ( substr($c->name, 0, 3)=="zkf" || substr($c->name, 0, 4)=="zkp_") { 
+            if ( preg_match($this->foreignKeyPattern, $c->name, $matches)) { 
+                $XXX = $this->getTableNameFromXXX($matches[2]);
                 if ( sizeof ($XXX) )
-                    $table->foreignKeys[] = [$XXX[0],   $c->name => "zkp"];
+                    $table->foreignKeys[] = [$XXX[0],   $c->name => $this->defaultPrimaryKey];
             }
         }
     }
     
      protected function getTableNameFromXXX($XXX) {
-         $sql="SELECT DISTINCT(BaseTableName) FROM FileMaker_Tables WHERE BaseTableName LIKE '$XXX\_%'";
-         return $this->db->createCommand($sql)->queryColumn();
+         if ( sizeof( $this->_tables ) == 0 )
+             $this->parseSchema();
+         
+         foreach ( $this->_tables as $tableName => $infos ){
+             if ( strtolower($XXX) == strtolower($tableName) || preg_match('/^'.$XXX.'_/', $tableName))
+                 return [$infos['tables'][0]];
+         }
+         return [];
      }
      
      /**
@@ -275,4 +303,128 @@ class Schema extends \yii\db\Schema
         return Yii::createObject('airmoi\yii2fmconnector\db\ColumnSchema');
     }
     
+    /**
+     * @return boolean TRUE on success
+     * @throws \yii\base\InvalidConfigException
+     */
+    protected function parseSchema()
+    {
+        \Yii::trace('Caching DB schema', __METHOD__);
+        $this->_tables = [];
+        
+        /* Store Tables */
+        $sql="SELECT BaseTableName, TableName FROM FileMaker_Tables WHERE BaseTableName IS NOT NULL";
+        $tables = $this->db->createCommand($sql)->cache($this->db->schemaCacheDuration)->queryAll();
+        foreach ( $tables as $table ) {
+            $this->_tableMap[$table['TableName']] = $table['BaseTableName'];
+            if ( !isset( $this->_tables [$table['BaseTableName']]))
+                $this->_tables [$table['BaseTableName']] = ['tables'=>[], 'fields'=>[]];
+            $this->_tables [$table['BaseTableName']]['tables'][] = $table['TableName'];
+            //asort($this->_tables [$table['BaseTableName']]['tables']);
+        }
+        $TOs = [];
+        foreach ( $this->_tables as $baseTableName => $infos ){
+            asort($this->_tables [$baseTableName]['tables']);
+            $TOs[] = $this->_tables [$baseTableName]['tables'][0];
+        }
+        
+        /* Store Fields */
+        $sql="SELECT * FROM FileMaker_Fields";
+        $conditions = [];
+        foreach ( $this->ignoreFields as $type => $patterns ){
+            foreach ( $patterns as $pattern ) {
+                $conditions[] = "$type NOT LIKE '$pattern' ";
+            }
+        };
+        
+        if ( sizeof($conditions)>0)
+            $sql .= ' WHERE '.implode (' AND ', $conditions );
+        
+        /* Limit to each Table's main Occurrences */
+        $sql .= " AND TableName IN('".implode("', '", $TOs)."') ORDER BY TableName, FieldName";
+        
+        try {
+            $columns = $this->db->createCommand($sql)->cache($this->db->schemaCacheDuration)->queryAll();
+            if (empty($columns)) {
+            \Yii::error('Schema cache fail : No columns found', __METHOD__ );
+                return false;
+            }
+        } catch (\Exception $e) {
+            \Yii::error('Schema cache fail : ' . $e->getMessage(), __METHOD__ );
+            return false;
+        }
+        foreach ($columns as $column) {
+            /* Find BaseTable Name */
+            /*foreach ( $this->_tables as $baseTableName => $infos )
+            {
+                if ( array_search($column['TableName'], $infos['tables']) !== false){
+                    break; 
+                }
+            }*/
+            $baseTableName = $this->_tableMap[$column['TableName']];
+            if( array_key_exists($column['FieldName'],  $this->_tables[$baseTableName]['fields']))
+                continue;
+            
+            $this->_tables[$baseTableName]['fields'][$column['FieldName']] = $column;
+        }
+        
+        \Yii::trace('Db schema cache done', __METHOD__ );
+        return true;
+    }
+    
+    /**
+     * Array of columns indexed by fieldName present in specfied table
+     * @param string $tableName
+     * @return ColumnSchema[]
+     */
+    public function listFields($tableName){
+        if ( sizeof( $this->_tables ) == 0 )
+             $this->parseSchema();
+         
+        return $this->_tables[$this->_tableMap[$tableName]]['fields'];
+        
+    }
+    
+    /**
+     * Returns the ID of the last inserted row or sequence value.
+     * @param string $sequenceName name of the sequence object (required by some DBMS)
+     * @return string the row ID of the last row inserted, or the last value retrieved from the sequence object
+     * @throws InvalidCallException if the DB connection is not active
+     * @see http://www.php.net/manual/en/function.PDO-lastInsertId.php
+     */
+    public function getLastInsertID($sequenceName = '')
+    {
+        if ( empty($sequenceName) )
+                return null;
+        
+        $tableSchema = $this->getTableSchema($sequenceName);
+        if ($this->db->isActive) {
+            $id = $this->db->createCommand("SELECT MAX(".$tableSchema->primaryKey[0].") FROM $sequenceName")->queryColumn();
+            return $this->db->createCommand("SELECT MAX(".$tableSchema->primaryKey[0].") FROM $sequenceName")->queryColumn()[0];
+            
+        } else {
+            throw new InvalidCallException('DB Connection is not active.');
+        }
+    }
+    
+    /**
+     * Executes the INSERT command, returning primary key values.
+     * @param string $table the table that new rows will be inserted into.
+     * @param array $columns the column data (name => value) to be inserted into the table.
+     * @return array primary key values or false if the command fails
+     * @since 2.0.4
+     */
+    public function insert($table, $columns)
+    {
+        $command = $this->db->createCommand()->insert($table, $columns);
+        if (!$command->execute()) {
+            return false;
+        }
+        $tableSchema = $this->getTableSchema($table);
+        $result = [];
+        foreach ($tableSchema->primaryKey as $name) {  
+                $result[$name] = $this->getLastInsertID($table);
+        }
+        return $result;
+    }
 }

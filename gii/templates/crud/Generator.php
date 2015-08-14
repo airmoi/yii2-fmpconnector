@@ -9,6 +9,7 @@
 namespace airmoi\yii2fmconnector\gii\crud;
 
 use yii\helpers\Inflector;
+use airmoi\yii2fmconnector\db\Schema;
 /**
  * Generates CRUD
  *
@@ -64,5 +65,69 @@ class Generator extends \yii\gii\generators\crud\Generator
                 return "\$form->field(\$model, '$attribute')->$input(['maxlength' => $column->size])";
             }
         }
+    }
+    
+    /**
+     * Generates code namespaces potentially used in views (related models)
+     * @return string
+     */
+    public function generateNamespaces()
+    {
+        $tableSchema = $this->getTableSchema();
+        if ($tableSchema === false) {
+            return ;
+        }
+        
+        $models = [];
+        foreach ( $tableSchema->foreignKeys as $relation) {
+            $models[] = "use app\models\\" . Inflector::id2camel($relation[0], '_').";";
+        }
+        return implode ( "\r\n", $models);
+    }
+    
+    /**
+     * Generates validation rules for the search model.
+     * @return array the generated validation rules
+     */
+    public function generateSearchRules()
+    {
+        if (($table = $this->getTableSchema()) === false) {
+            return ["[['" . implode("', '", $this->getColumnNames()) . "'], 'safe']"];
+        }
+        $types = [];
+        foreach ($table->columns as $column) {
+            switch ($column->type) {
+                case Schema::TYPE_BINARY:
+                    break;
+                case Schema::TYPE_SMALLINT:
+                case Schema::TYPE_INTEGER:
+                case Schema::TYPE_BIGINT:
+                    $types['integer'][] = $column->name;
+                    break;
+                case Schema::TYPE_BOOLEAN:
+                    $types['boolean'][] = $column->name;
+                    break;
+                case Schema::TYPE_FLOAT:
+                case Schema::TYPE_DOUBLE:
+                case Schema::TYPE_DECIMAL:
+                case Schema::TYPE_MONEY:
+                    $types['number'][] = $column->name;
+                    break;
+                case Schema::TYPE_DATE:
+                case Schema::TYPE_TIME:
+                case Schema::TYPE_DATETIME:
+                case Schema::TYPE_TIMESTAMP:
+                default:
+                    $types['safe'][] = $column->name;
+                    break;
+            }
+        }
+
+        $rules = [];
+        foreach ($types as $type => $columns) {
+            $rules[] = "[['" . implode("', '", $columns) . "'], '$type']";
+        }
+
+        return $rules;
     }
 }
