@@ -106,4 +106,61 @@ class <?= $className ?> extends <?= '\\' . ltrim($generator->baseClass, '\\') . 
         
         return $result;
     }
+    
+    /**
+     * Generate query search params from model values
+     * @param \yii\db\ActiveQuery $query
+     * @param array $params
+     *
+     * @return ActiveDataProvider
+     */
+    public function buildSearch(\yii\db\ActiveQuery $query)
+    {
+        $a = key($query->from);
+        
+        $query->andFilterWhere([<?php foreach ($tableSchema->columns as $column) {
+            if( in_array ($column->phpType, ['integer', 'boolean', 'double', 'timestamp', 'time']) 
+                    or $column->isPrimaryKey 
+                    or $tableSchema->isForeignKey($column)  
+                    ) { ?> 
+            $a.'.<?= $column->name ?>' => $this-><?= $column->name ?>,<?php
+         } }?>
+        ]);
+        
+        $query<?php foreach ($tableSchema->columns as $column) {
+            if( in_array ($column->phpType, ['string']) 
+                    and !$column->isPrimaryKey 
+                    and !$tableSchema->isForeignKey($column)  
+                    ) {
+            ?>->andFilterWhere(['like', 'LOWER(' . $a . '.<?= $column->name?>)', strtolower($this-><?= $column->name?>)])
+            <?php } }?>;
+            
+            
+        /*
+         * build related join query if needed (use model's related records
+         */
+        foreach($this->relatedRecords as $relationName => $relatedRecord){
+            if( !$relatedRecord instanceof \yii\db\ActiveRecord ){
+                continue;
+            }
+            /**
+             * @var ActiveRecord $relatedRecord
+             */
+            $isempty = true;
+            foreach($relatedRecord->attributes() as $field){
+                if(!empty($relatedRecord->$field)){
+                    $isempty = false;
+                    break;
+                }
+            }
+            
+            if($isempty)
+                continue;
+            
+            $query->joinWith([$relationName => function($query) use ($relatedRecord){
+                $relatedRecord->buildSearch($query);
+            }]);
+        } 
+        return $query;
+    }
 }
