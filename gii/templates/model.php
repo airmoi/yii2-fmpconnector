@@ -116,10 +116,10 @@ class <?= $className ?> extends <?= '\\' . ltrim($generator->baseClass, '\\') . 
      */
     public function buildSearch(\yii\db\ActiveQuery $query)
     {
-        $a = key($query->from);
+        $a = is_array($query->from)? key($query->from) : self::tableName();
         
         $query->andFilterWhere([<?php foreach ($tableSchema->columns as $column) {
-            if( in_array ($column->phpType, ['integer', 'boolean', 'double', 'timestamp', 'time']) 
+            if( in_array ($column->phpType, ['integer', 'boolean', 'double', 'timestamp', 'time', 'date']) 
                     or $column->isPrimaryKey 
                     or $tableSchema->isForeignKey($column)  
                     ) { ?> 
