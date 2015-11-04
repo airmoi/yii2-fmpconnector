@@ -16,4 +16,11 @@ namespace airmoi\yii2fmconnector\db;
 class TableSchema extends \yii\db\TableSchema
 {
     public $baseTableName;
+    
+    public function isForeignKey(ColumnSchema $column){
+        foreach($this->foreignKeys as $fk){
+            if(array_key_exists($column->name, $fk))
+                return true;
+        }
+    }
 }
