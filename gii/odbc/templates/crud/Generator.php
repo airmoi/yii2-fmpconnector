@@ -6,7 +6,7 @@
  */
 
 
-namespace airmoi\yii2fmconnector\gii\crud;
+namespace airmoi\yii2fmconnector\gii\odbc\crud;
 
 use yii\helpers\Inflector;
 use airmoi\yii2fmconnector\db\Schema;
