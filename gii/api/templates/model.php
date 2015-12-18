@@ -35,7 +35,7 @@ use Yii;
 <?php endforeach; ?>
 <?php endif; ?>
  */
-class <?= $className ?> extends <?= '\\' . ltrim($generator->baseClass, '\\') . "\n" ?>
+class <?= $className ?> extends airmoi\yii2fmconnector\api\FileMakerModel
 {
     private static $_vList = [
         <?php foreach ($valueLists as $valueList): ?>
@@ -45,7 +45,7 @@ class <?= $className ?> extends <?= '\\' . ltrim($generator->baseClass, '\\') . 
     /**
      * @inheritdoc
      */
-    public static function tableName()
+    public static function layoutName()
     {
         return '<?= $generator->generateTableName($tableName) ?>';
     }
