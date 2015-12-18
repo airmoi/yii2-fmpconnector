@@ -18,6 +18,8 @@ use airmoi\FileMaker\Object\Layout;
  * @author Romain Dunand <airmoi@gmail.com>
  * @since 1.0
  * 
+ * @method TableSchema getTableSchema($name, $refresh = false) Obtains the metadata for the named table.
+ * 
  * @property Connection $db Description
  */
 class Schema extends \yii\db\Schema
@@ -163,8 +165,13 @@ class Schema extends \yii\db\Schema
         
         foreach ($fields as $field) {
             $column = $this->loadColumnSchema($field);
+            
+            //handle related Fields outside portals
             if($column->isRelated){
-                $table->relations[$column->relationName] = [0 , [$column]];
+                if( !isset($table->relations[$column->relationName])){
+                    $table->relations[$column->relationName] = [0, []];
+                }
+                $table->relations[$column->relationName][1][$column->name] = $column;
             }
             else {
                 $table->columns[$column->name] = $column;
@@ -217,6 +224,14 @@ class Schema extends \yii\db\Schema
                 $column = $this->loadColumnSchema($field);
                 $relationColumns[$column->name] = $column;
             }
+            
+            $relationColumns['_recid'] = $this->createColumnSchema();
+            $relationColumns['_recid']->name = '_recid';
+            $relationColumns['_recid']->allowNull = false;
+            $relationColumns['_recid']->isPrimaryKey = true;
+            $relationColumns['_recid']->autoIncrement = true;
+            $relationColumns['_recid']->phpType = 'integer';
+            
             $table->relations[$relationName] = [1, $relationColumns] ;
         }
     }

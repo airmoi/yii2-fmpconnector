@@ -15,6 +15,8 @@ use yii\base\UnknownMethodException;
  * @author Romain Dunand <airmoi@gmail.com>
  * @since 1.0
  * 
+ * @method Schema getSchema()
+ * 
  * @method string getAPIVersion() Returns the version of the FileMaker API for PHP.
  * @method string getContainerData($url) Returns the data for the specified container field.
  * @method string getContainerDataURL($url) Returns the fully qualified URL for the specified container field.
