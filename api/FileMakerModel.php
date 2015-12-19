@@ -273,12 +273,12 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
         parent::populateRecord($record, $row);
         
         //Populate relations
-        foreach ( $this->getDb()->getSchema()->getTableSchema(static::layoutName())->relations as $relationName => $relationConfig){
+        foreach ( static::getDb()->getSchema()->getTableSchema(static::layoutName())->relations as $relationName => $relationConfig){
             if( !$relationConfig[0] ){
-                $this->populateHasOneRelation($relationName, $relationConfig[1], $fmRecord);
+                $record->populateHasOneRelation($relationName, $relationConfig[1], $fmRecord);
             }
             else {
-                $this->populateHasManyRelation($relationName, $relationConfig[1], $fmRecord);
+                $record->populateHasManyRelation($relationName, $relationConfig[1], $fmRecord);
             }
         }
 
@@ -291,8 +291,9 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
      * @param ColumnSchema[] $fields
      * @param \airmoi\FileMaker\Object\Record $record
      */
-    protected static function populateHasOneRelation( $relationName, $fields, \airmoi\FileMaker\Object\Record $record) {
-        $modelClass = ucfirst($relationName);
+    protected function populateHasOneRelation( $relationName, $fields, \airmoi\FileMaker\Object\Record $record) {
+        $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
+        
         $model = new $modelClass();
         foreach ( $fields as $fieldName => $config){
             $model->$fieldName = $record->getField($relationName . '::' . $fieldName);
@@ -307,8 +308,8 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
      * @param ColumnSchema[] $fields
      * @param \airmoi\FileMaker\Object\Record $record
      */
-    protected static function populateHasManyRelation( $relationName, $fields, \airmoi\FileMaker\Object\Record $record) {
-        $modelClass = ucfirst($relationName);
+    protected function populateHasManyRelation( $relationName, $fields, \airmoi\FileMaker\Object\Record $record) {
+        $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
         
         $records = $record->getRelatedSet($relationName);
         $models = [];
