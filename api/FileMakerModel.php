@@ -152,7 +152,8 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
                  $id = $id[static::primaryKey()[0]];
              }
             $request = $fm->newFindCommand(static::layoutName());
-            $request->addFindCriterion(static::primaryKey()[0], $id);
+            $request->setRecordId($id);
+            //$request->addFindCriterion(static::primaryKey()[0], $id);
             $result = $request->execute();
             
             $model = new static();
@@ -161,7 +162,10 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
             
         } catch (\airmoi\FileMaker\FileMakerException $ex) {
             Yii::error($ex->getMessage(), __METHOD__);
-            throw new \yii\web\HttpException('Serveur introuvable');
+            if($ex->getCode() === 101){
+                return null;
+            }
+            throw new \yii\web\HttpException($ex->getMessage());
         }   
     }
     
