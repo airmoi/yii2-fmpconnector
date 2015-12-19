@@ -63,17 +63,6 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
     public function attributes()
     {
         return array_keys($this->getDb()->getSchema()->getTableSchema($this->layoutName())->columns);
-        
-        /*if(!isset(static::$_attributesList[static::layoutName()])){
-            $fields = [];
-            $layout = static::getLayout();
-            static::$_attributesProperties = $layout->getFields();
-            foreach (static::$_attributesProperties as $field) {
-                $fields[] = $field->name;
-            }
-            static::$_attributesList[static::layoutName()] = $fields;
-        }
-        return static::$_attributesList[static::layoutName()] ;*/
     }
     
     /**
@@ -269,11 +258,11 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
      */
     protected static function populateRecordFromFm(FileMakerModel $record, \airmoi\FileMaker\Object\Record $fmRecord){
         $record->_record = $fmRecord;
-        $record->_recid = $fmRecord->getRecordId();
         $row = [];
         foreach ($record->attributes() as $attribute){
             $row[$attribute] = $fmRecord->getField($attribute);
         }
+        $row['_recid'] = $fmRecord->getRecordId();
         parent::populateRecord($record, $row);
         
         //Populate relations
@@ -320,11 +309,11 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
         
         foreach ( $records as $record ){ 
             $model = new $modelClass();
-            $model->_recid = $record->getRecordId();
             foreach ( $fields as $fieldName => $config){
                 $model->$fieldName = $record->getField($relationName . '::' . $fieldName);
             } 
-            $models['_recid'] = $model;
+            $model->$fieldName = $record->getRecordId();
+            $models[$record->getRecordId()] = $model;
         }
         
         $this->populateRelation($relationName, $models);
