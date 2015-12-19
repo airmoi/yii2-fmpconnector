@@ -21,6 +21,9 @@ $valueLists = $tableSchema->valueLists;
 namespace <?= $generator->ns ?>;
 
 use Yii;
+use airmoi\yii2fmconnector\api\FileMakerModel; 
+use airmoi\yii2fmconnector\api\FileMakerRelatedRecord; 
+
 
 /**
  * This is the model class for table "<?= $generator->generateTableName($tableName) ?>".
@@ -35,7 +38,7 @@ use Yii;
 <?php endforeach; ?>
 <?php endif; ?>
  */
-class <?= $className ?> extends airmoi\yii2fmconnector\api\FileMakerModel
+class <?= $className ?> extends FileMakerModel
 {
     private static $_vList = [
         <?php foreach ($valueLists as $valueList): ?>
@@ -99,8 +102,11 @@ class <?= $className ?> extends airmoi\yii2fmconnector\api\FileMakerModel
  * @property <?= "{$column->phpType} \${$column->name}\n" ?>
 <?php endforeach; ?>
  */
-class <?= $name ?> extends <?= '\\' . ltrim($generator->baseClass, '\\') . "\n" ?>{
-    
+ class <?= ucfirst($name) ?> extends FileMakerRelatedRecord
+{
+<?php foreach ($relation[1] as $column): ?>
+    public $<?= $column->name ?>;
+<?php endforeach; ?>    
 }
 <?php endforeach; ?>
 <?php endif; ?>
