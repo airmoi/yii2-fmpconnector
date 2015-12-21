@@ -10,7 +10,7 @@ use yii\base\Model;
  *
  * @author romain
  */
-class FileMakerModel extends \yii\db\BaseActiveRecord 
+class FileMakerActiveRecord extends \yii\db\BaseActiveRecord 
 {
     /**
      *
@@ -67,11 +67,11 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
     
     /**
      * @inheritdoc
-     * @return \airmoi\FileMaker\Command\Find the newly created [[Find]] instance.
+     * @return ActiveFind the newly created [[ActiveFind]] instance.
      */
     public static function find()
     {
-        return static::getDb()->newFindCommand(static::layoutName());
+        return Yii::createObject(ActiveFind::className(), [get_called_class()]);
     }
     
     /**
@@ -184,6 +184,10 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
         throw new \yii\base\NotSupportedException('layoutName Method should be overidded');
     }
     
+    /**
+     * Return the layout name use by this model
+     * @return string
+     */
     public static function getLayout() {
         if(!isset(static::$_layout[static::layoutName()])) {
             $fm = static::getDb();

@@ -21,7 +21,7 @@ $valueLists = $tableSchema->valueLists;
 namespace <?= $generator->ns ?>;
 
 use Yii;
-use airmoi\yii2fmconnector\api\FileMakerModel; 
+use airmoi\yii2fmconnector\api\FileMakerActiveRecord; 
 use airmoi\yii2fmconnector\api\FileMakerRelatedRecord; 
 
 
@@ -38,7 +38,7 @@ use airmoi\yii2fmconnector\api\FileMakerRelatedRecord;
 <?php endforeach; ?>
 <?php endif; ?>
  */
-class <?= $className ?> extends FileMakerModel
+class <?= $className ?> extends FileMakerActiveRecord
 {
     private static $_vList = [
         <?php foreach ($valueLists as $valueList): ?>
