@@ -260,7 +260,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      * @param \airmoi\FileMaker\Object\Record $fmRecord
      * @return self
      */
-    protected static function populateRecordFromFm(FileMakerModel $record, \airmoi\FileMaker\Object\Record $fmRecord){
+    public static function populateRecordFromFm(FileMakerActiveRecord $record, \airmoi\FileMaker\Object\Record $fmRecord){
         $record->_record = $fmRecord;
         $row = [];
         foreach ($record->attributes() as $attribute){
