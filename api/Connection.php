@@ -31,6 +31,7 @@ use yii\base\UnknownMethodException;
  * 
  * @method \airmoi\FileMaker\Object\Layout getLayout($layout) Returns the layout object.
  * @method \airmoi\FileMaker\Object\Record createRecord($layout, $fieldValues = []) Creates a new FileMaker_Record object.
+ * @method \airmoi\FileMaker\Object\Record getRecordById($layout , $id) Returns a single Object\Record object matching the given layout and record ID, or throws a FileMakerException object, if this operation fails.
  * 
  * @method \airmoi\FileMaker\Command\Add newAddCommand($layout, $values = array()) Creates a new Add object.
  * @method \airmoi\FileMaker\Command\CompoundFind newCompoundFindCommand($layout) Creates a new CompoundFind object.
@@ -67,6 +68,8 @@ class Connection extends \yii\db\Connection
             ]// FileMaker ODBC
        
     ];
+    
+    public $options = [];
     
     public function __construct($config = array()) {
         parent::__construct($config);
@@ -109,8 +112,8 @@ class Connection extends \yii\db\Connection
     protected function createFmInstance()
     {
         $this->parseDsn();
-        return new FmpHelper(['db' =>$this->dbName, 'host' => $this->host, 'username' => $this->username, 'password' => $this->password]);
-
+        $config = yii\helpers\ArrayHelper::merge($this->options, ['db' =>$this->dbName, 'host' => $this->host, 'username' => $this->username, 'password' => $this->password]);
+        return new FmpHelper($config);
     }
     
     /**

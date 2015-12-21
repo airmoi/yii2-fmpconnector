@@ -63,11 +63,16 @@ class FmpHelper extends Component {
     public $errorTag = "SCRIPT_ERRORCODE";
     public $errorDescriptionTag = "SCRIPT_ERRORDESCRIPTION";
     public $scriptResultTag = "SCRIPT_RESULT";
-    public $host = 'localhost';
+    public $host = '127.0.0.1';
     public $db = '';
     public $username = '';
     public $password = '';
     public $uniqueSession = true;
+    public $dateFormat;
+    public $charset = 'utf-8';
+    public $locale = 'en';
+    public $prevalidate = false;
+    public $curlOptions = [CURLOPT_SSL_VERIFYPEER => false];
     
     /** @var FileMaker */
     private $_fm;
@@ -92,8 +97,13 @@ class FmpHelper extends Component {
             	$_COOKIE["WPCSessionID"] = $this->_cookie;
        		}
         }
-        if ( $this->_fm === null )
+        if ( $this->_fm === null ) {
             $this->_fm = new FileMaker($this->db, $this->host, $this->username, $this->password);
+            $this->_fm->setProperty('charset', $this->charset);
+            $this->_fm->setProperty('locale', $this->locale);
+            $this->_fm->setProperty('prevalidate', $this->prevalidate);
+            $this->_fm->setProperty('curlOptions', $this->curlOptions);
+        }
     }
 
     private function endConnection() { 
@@ -305,6 +315,22 @@ class FmpHelper extends Component {
         else {
             return 'application/octet-stream';
         }
+    }
+    
+    public function dateConvertInput($value) {
+        if($this->dateFormat === null){
+            return $value;
+        }
+        $date = \DateTime::createFromFormat($this->dateFormat, $value);
+        return $date->format('m/d/Y');
+    }
+    
+    public function dateConvertOutput($value) {
+        if($this->dateFormat === null){
+            return $value;
+        }
+        $date = \DateTime::createFromFormat('m/d/Y', $value);
+        return $date->format($this->dateFormat);
     }
 }
 
