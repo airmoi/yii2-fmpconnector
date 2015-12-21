@@ -92,7 +92,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * The array may also contain [[Expression]] objects. If that is the case, the expressions
      * will be converted into strings without any change.
      */
-    public $orderBy;
+    public $orderBy = [];
     /**
      * @var string|callable $column the name of the column by which the query results should be indexed by.
      * This can also be a callable (e.g. anonymous function) that returns the index value based on the given
@@ -133,6 +133,8 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @var \airmoi\FileMaker\Object\Result 
      */
     private $_result;
+    
+    public $_recordId;
 
     /**
      * Constructor.
@@ -178,11 +180,11 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
             $rows = $result->getRecords();
             return $this->populate($rows);
         }
-        catch (airmoi\FileMaker\FileMakerException $e){
+        catch (\Exception $e){
             if( $e->getCode() == 401 ){
                 return [];
             }
-            throw $e;
+            throw new \Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
         }
     }
     
@@ -212,7 +214,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         }
         
         //Tranform query to findall query if no find request set
-        if($emptyRequest){
+        if($emptyRequest && $this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind){
             $this->_cmd = $this->db->newFindAllCommand($this->layout);
         }
         
@@ -403,13 +405,13 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         try {
             $result = $this->execute();
             $rows = $result->getFirstRecord();
-            return $this->populate($rows);
+            return $this->populate([$rows])[0];
         }
-        catch (airmoi\FileMaker\FileMakerException $e){
+        catch (\Exception $e){
             if( $e->getCode() == 401 ){
-                return [];
+                return null;
             }
-            throw $e;
+            throw new Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
         }
     }
     
@@ -659,18 +661,22 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     
     private function serializeQuery() {
         $command = ['layout' => $this->layout];
-        if($this->_cmd instanceof \airmoi\FileMaker\Command\FindAll){
-            $command['method'] = 'FindAll';
-        } else {
-            $command['method'] = 'CompoundFind';
+        $command['method'] = get_class($this->_cmd);
+        if($this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind){
             foreach( $this->_requests as $request ){
                $command['method']['requests'][] = $request->findCriteria;
             }
-        }
+        } 
         $command['offset'] = $this->offset;
-        $command['offset'] = $this->limit;
+        $command['limit'] = $this->limit;
         $command['sort'] = $this->orderBy;
         
-        return print_r($command, true);
+        return json_encode($command);
+    }
+    
+    public function getRecordById($id){
+        $this->_cmd = $this->db->newFindCommand($this->layout);
+        $this->_cmd->setRecordId($id);
+        return $this->one();
     }
 }
