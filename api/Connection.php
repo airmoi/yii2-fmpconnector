@@ -44,6 +44,7 @@ use yii\base\UnknownMethodException;
  * @method \airmoi\FileMaker\Command\FindRequest newFindRequest($layout) Creates a new FindRequest object.
  * @method \airmoi\FileMaker\Command\PerformScript newPerformScriptCommand($layout, $scriptName, $scriptParameters = null) Creates a new PerformScript object.
  * 
+ * @method string getLastRequestedUrl() Last URL call to xml engine.
  * 
  * @method null setProperty($prop, $value) Sets a property to a new value for all API calls.
  */
@@ -87,8 +88,10 @@ class Connection extends \yii\db\Connection
         try {
             Yii::info($token, __METHOD__);
             Yii::beginProfile($token, __METHOD__);
+            
             $this->_fm = $this->createFmInstance();
             $this->initConnection();
+            
             Yii::endProfile($token, __METHOD__);
         } catch (\Exception $e) {
             Yii::endProfile($token, __METHOD__);

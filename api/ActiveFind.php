@@ -7,6 +7,7 @@
 
 namespace airmoi\yii2fmconnector\api;
 
+use Yii;
 use yii\base\InvalidConfigException;
 use airmoi\FileMaker\FileMaker;
 
@@ -233,8 +234,20 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function execute() {
         if( $this->_result === null){
             $this->prepare();
-            $this->_result = $this->_cmd->execute();
-            $this->_count = $this->_result->getTableRecordCount();
+            
+            Yii::beginProfile($this->serializeQuery(), 'yii\db\Command::query');
+            
+            try {
+                $this->_result = $this->_cmd->execute();
+                $this->_count = $this->_result->getTableRecordCount();
+                Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
+                
+            } catch (airmoi\FileMaker\FileMakerException $e){
+                Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
+                throw $this->db->getSchema()->convertException($e, $this->serializeQuery());
+            }
+            
+            Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
         }
         return $this->_result;
     }
@@ -642,5 +655,22 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     {
         $this->indexBy = $column;
         return $this;
+    }
+    
+    private function serializeQuery() {
+        $command = ['layout' => $this->layout];
+        if($this->_cmd instanceof \airmoi\FileMaker\Command\FindAll){
+            $command['method'] = 'FindAll';
+        } else {
+            $command['method'] = 'CompoundFind';
+            foreach( $this->_requests as $request ){
+               $command['method']['requests'][] = $request->findCriteria;
+            }
+        }
+        $command['offset'] = $this->offset;
+        $command['offset'] = $this->limit;
+        $command['sort'] = $this->orderBy;
+        
+        return print_r($command, true);
     }
 }

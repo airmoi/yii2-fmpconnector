@@ -79,8 +79,17 @@ class Schema extends \yii\db\Schema
      * @return Layout
      */
     public function getlayout($layoutName) {  
-        if($this->_layout->getName() != $layoutName){
-            $this->_layout = $this->db->getLayout($layoutName);
+        if($this->_layout === null || $this->_layout->getName() != $layoutName){
+            $token = 'Getting layout "' . $layoutName . '"';
+            try {
+                Yii::info($token, __METHOD__);
+                Yii::beginProfile($token, __METHOD__);
+                $this->_layout = $this->db->getLayout($layoutName);
+                Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
+            } catch (airmoi\FileMaker\FileMakerException $e){
+                Yii::endProfile($token, __METHOD__);
+                throw new Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
+            }
         }
         return $this->_layout;
     }
@@ -93,7 +102,7 @@ class Schema extends \yii\db\Schema
     protected function resolveTableNames( TableSchema $table, $name)
     {
         //Check if Layout exists
-        $this->_layout = $this->db->getLayout($name);
+        $this->getlayout($name);
         
         $table->name = $name;
         $table->fullName = $name;
@@ -197,7 +206,18 @@ class Schema extends \yii\db\Schema
      */
     protected function findTableNames($schema = '')
     {
-        return $this->db->listLayouts();
+        $token = 'Getting layout\'s list';
+            try {
+                Yii::info($token, __METHOD__);
+                Yii::beginProfile($token, __METHOD__);
+                
+                $layouts = $this->db->listLayouts();
+                Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
+            } catch (airmoi\FileMaker\FileMakerException $e){
+                Yii::endProfile($token, __METHOD__);
+                throw new Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
+            }
+        return $layouts;
     }
 
     /**
