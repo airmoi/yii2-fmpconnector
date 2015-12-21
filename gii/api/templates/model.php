@@ -104,9 +104,26 @@ class <?= $className ?> extends FileMakerActiveRecord
  */
  class <?= ucfirst($name) ?> extends FileMakerRelatedRecord
 {
+    /**
+     * @var array attribute values indexed by attribute names
+     */
+    protected $_attributes = [
 <?php foreach ($relation[1] as $column): ?>
-    public $<?= $column->name ?>;
-<?php endforeach; ?>    
+        '<?= $column->name ?>',
+<?php endforeach; ?>  
+    ];
+    
+    /**
+     * @inheritdoc
+     */
+    public function attributeLabels()
+    {
+        return [
+<?php foreach ($relation[1] as $column): ?>
+            <?= "'$column->name' => " . $generator->generateString($column->name) . ",\n" ?>
+<?php endforeach; ?>
+        ];
+    }
 }
 <?php endforeach; ?>
 <?php endif; ?>

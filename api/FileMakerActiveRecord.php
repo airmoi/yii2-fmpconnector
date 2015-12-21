@@ -3,6 +3,7 @@ namespace airmoi\yii2fmconnector\api;
 
 use yii;
 use yii\base\Model;
+use yii\helpers\ArrayHelper;
 
 
 /**
@@ -80,50 +81,10 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     public static function findAll($condition = [], callable $callback = null)
     {
-        try {
-            $query = static::getDb()->newFindCommand(static::layoutName());
-
-            foreach($condition as $field => $value){
-                $query->addFindCriterion($field, $value);
-            }
-            $result = $query->execute();
-            $array = [];
-            foreach ( $result->getRecords() as $record){
-                $model = new static();
-                static::populateRecordFromFm($model, $record);
-                
-                if(!is_null($callback)){
-                    call_user_func($callback, $model);
-                }
-                $array[] = $model;
-            }
-            return $array;
-        } catch( \airmoi\FileMaker\FileMakerException $ex){
-            // catch "not found" error
-            if ( $ex->getCode() == '401'){
-                return [];
-            }
-            throw $ex;
-        }
+        $query = static::find();
+        $query->andWhere($condition);
+        return $query->all();
     }
-    
-    
-    
-    /**
-     * @inheritdoc
-     * @return static[]
-     */
-    public static function findAllAsArray($condition =null)
-    {
-        $query = static::getDb()->newFindAllCommand(static::layoutName());
-        $result = $query->execute();
-        $array = [];
-        foreach ( $result->getRecords() as $record){
-            $array[] = $record;
-        }
-        return $array;
-    }
-    
     
     /**
      * @inheritdoc
@@ -133,51 +94,19 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     {
         return static::getDb()->newCompoundFindCommand(static::layoutName());
     }
-            
-    public static function findOne($id){
-        try{
-             $fm = static::getDb();
-             if(is_array($id)){
-                 $id = $id[static::primaryKey()[0]];
-             }
-            $request = $fm->newFindCommand(static::layoutName());
-            $request->setRecordId($id);
-            //$request->addFindCriterion(static::primaryKey()[0], $id);
-            $result = $request->execute();
-            
-            $model = new static();
-            static::populateRecordFromFm($model, $result->getFirstRecord());
-            return $model;
-            
-        } catch (\airmoi\FileMaker\FileMakerException $ex) {
-            Yii::error($ex->getMessage(), __METHOD__);
-            if($ex->getCode() === 101){
-                return null;
-            }
-            throw new \yii\web\HttpException($ex->getMessage());
-        }   
-    }
     
-            
-    public static function findOneByRecID($recid){
-        
-        try{
-             $fm = static::getDb();
-        
-            $request = $fm->newFindCommand(static::layoutName());
-            $request->recordId = $recid;
-            $result = $request->execute();
-            
-            $record = $result->getFirstRecord();
-            
-            $model = new static();
-            $model->populateRecordFromFm($model, $record);
-            return $model;
-            
-        } catch (\airmoi\FileMaker\FileMakerException $ex) {
-            Yii::error($ex->getMessage(), __METHOD__);
-            throw new \yii\web\HttpException('Serveur introuvable');
+    /**
+     * 
+     * @param mixed $condition primary key value or a set of column values
+     * @return static ActiveRecord instance matching the condition, or null if nothing matches.
+     * @throws \yii\web\HttpException
+     */
+    public static function findOne($condition){
+        if(!ArrayHelper::isAssociative($condition)) {
+            return self::find()->getRecordById($condition);
         }
+
+        return self::find()->andWhere($condition)->one();
     }
     
     public static function layoutName() {
@@ -347,7 +276,10 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         }
         
         $values = $this->getDirtyAttributes($attributeNames);
-        
+        if( empty($values) ){
+            $this->addError('general', \Yii::t('app', 'Nothing to update'));
+            return false;
+        }
         try {
            $fm = static::getDb();
            $request = $fm->newEditCommand(static::layoutName(), $this->getRecId(), $values);
@@ -361,5 +293,131 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
 
 class FileMakerRelatedRecord extends Model 
 {
+    /**
+     * @var array attribute values indexed by attribute names
+     */
+    protected $_attributes = [];
+    /**
+     * @var array|null old attribute values indexed by attribute names.
+     * This is `null` if the record [[isNewRecord|is new]].
+     */
+    private $_oldAttributes;
     
+    
+    public function attributes()
+    {
+        return $this->_attributes;
+    }
+
+    /**
+     * Returns a value indicating whether the model has an attribute with the specified name.
+     * @param string $name the name of the attribute
+     * @return boolean whether the model has an attribute with the specified name.
+     */
+    public function hasAttribute($name)
+    {
+        return isset($this->_attributes[$name]) || in_array($name, $this->attributes());
+    }
+    
+    /**
+     * Returns the attribute values that have been modified since they are loaded or saved most recently.
+     * @param string[]|null $names the names of the attributes whose values may be returned if they are
+     * changed recently. If null, [[attributes()]] will be used.
+     * @return array the changed attribute values (name-value pairs)
+     */
+    public function getDirtyAttributes($names = null)
+    {
+        if ($names === null) {
+            $names = $this->attributes();
+        }
+        $names = array_flip($names);
+        $attributes = [];
+        if ($this->_oldAttributes === null) {
+            foreach ($this->_attributes as $name => $value) {
+                if (isset($names[$name])) {
+                    $attributes[$name] = $value;
+                }
+            }
+        } else {
+            foreach ($this->_attributes as $name => $value) {
+                if (isset($names[$name]) && (!array_key_exists($name, $this->_oldAttributes) || $value !== $this->_oldAttributes[$name])) {
+                    $attributes[$name] = $value;
+                }
+            }
+        }
+        return $attributes;
+    }
+    
+    /**
+     * PHP getter magic method.
+     * This method is overridden so that attributes and related objects can be accessed like properties.
+     *
+     * @param string $name property name
+     * @throws \yii\base\InvalidParamException if relation name is wrong
+     * @return mixed property value
+     * @see getAttribute()
+     */
+    public function __get($name)
+    {
+        if (isset($this->_attributes[$name]) || array_key_exists($name, $this->_attributes)) {
+            return $this->_attributes[$name];
+        } elseif ($this->hasAttribute($name)) {
+            return null;
+        } else {
+            if (isset($this->_related[$name]) || array_key_exists($name, $this->_related)) {
+                return $this->_related[$name];
+            }
+            $value = parent::__get($name);
+            if ($value instanceof ActiveQueryInterface) {
+                return $this->_related[$name] = $value->findFor($name, $this);
+            } else {
+                return $value;
+            }
+        }
+    }
+
+    /**
+     * PHP setter magic method.
+     * This method is overridden so that AR attributes can be accessed like properties.
+     * @param string $name property name
+     * @param mixed $value property value
+     */
+    public function __set($name, $value)
+    {
+        if ($this->hasAttribute($name)) {
+            $this->_attributes[$name] = $value;
+        } else {
+            parent::__set($name, $value);
+        }
+    }
+
+    /**
+     * Checks if a property value is null.
+     * This method overrides the parent implementation by checking if the named attribute is null or not.
+     * @param string $name the property name or the event name
+     * @return boolean whether the property value is null
+     */
+    public function __isset($name)
+    {
+        try {
+            return $this->__get($name) !== null;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Sets a component property to be null.
+     * This method overrides the parent implementation by clearing
+     * the specified attribute value.
+     * @param string $name the property name or the event name
+     */
+    public function __unset($name)
+    {
+        if ($this->hasAttribute($name)) {
+            unset($this->_attributes[$name]);
+        } else {
+            parent::__unset($name);
+        }
+    }
 }
