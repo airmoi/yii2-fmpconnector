@@ -100,7 +100,7 @@ class FileMakerModel extends \yii\db\BaseActiveRecord
             return $array;
         } catch( \airmoi\FileMaker\FileMakerException $ex){
             // catch "not found" error
-            if ( $ex->getCode() == '101'){
+            if ( $ex->getCode() == '401'){
                 return [];
             }
             throw $ex;
