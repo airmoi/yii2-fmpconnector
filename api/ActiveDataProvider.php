@@ -10,7 +10,7 @@ namespace airmoi\yii2fmconnector\api;
 use Yii;
 use yii\base\InvalidConfigException;
 use yii\base\Model;
-use yii\db\Connection;
+use airmoi\yii2fmconnector\api\Connection;
 use yii\db\QueryInterface;
 use yii\di\Instance;
 
@@ -42,7 +42,7 @@ use airmoi\FileMaker\Command\Find;
 class ActiveDataProvider extends \yii\data\BaseDataProvider
 {
     /**
-     * @var Find the query that is used to fetch data models and [[totalCount]]
+     * @var ActiveFind the query that is used to fetch data models and [[totalCount]]
      * if it is not explicitly set.
      */
     public $query;
@@ -83,22 +83,25 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
      */
     protected function prepareModels()
     {
-        if (!$this->query instanceof Find) {
-            throw new InvalidConfigException('The "query" property must be an instance of a class that implements Find Command e.g. airmoi\FileMaker\Find or its subclasses.');
+        if (!$this->query instanceof ActiveFind) {
+            throw new InvalidConfigException('The "query" property must be an instance of a class that implements ActiveFind.');
         }
-        $query = clone $this->query;
+        
         if (($pagination = $this->getPagination()) !== false) {
-            $query->setRange($pagination->getOffset(), $pagination->getLimit());
+            //Dirty hack : force page n° as totalcount is already returned by FileMaker PHP-API
+            $pagination->setPage(Yii::$app->getRequest()->getQueryParam($pagination->pageParam, 1 )-1, false);
+            $this->query->limit($pagination->getLimit())->offset($pagination->getOffset());
         }
         if (($sort = $this->getSort()) !== false) {
             foreach($sort->getOrders() as $field => $order){
-                $query->addSortRule($fieldname, $order . 'end'); //append 'end' to asc/desc
+                $this->query->orderBy(); //append 'end' to asc/desc
             }
-            $query->addOrderBy($sort->getOrders());
+            $this->query->addOrderBy($sort->getOrders());
         }
 
-        $result =  $query->execute();
-        $pagination->totalCount = $result->getTableRecordCount();
+        $models =  $this->query->all();
+        $pagination->totalCount = $this->query->count();
+        return $models;
     }
 
     /**
@@ -117,7 +120,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
             }
 
             return $keys;
-        } elseif ($this->query instanceof ActiveQueryInterface) {
+        } elseif ($this->query instanceof ActiveFind) {
             /* @var $class \yii\db\ActiveRecord */
             $class = $this->query->modelClass;
             $pks = $class::primaryKey();
@@ -150,8 +153,8 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
         if (!$this->query instanceof QueryInterface) {
             throw new InvalidConfigException('The "query" property must be an instance of a class that implements the QueryInterface e.g. yii\db\Query or its subclasses.');
         }
-        $query = clone $this->query;
-        return (int) $query->limit(-1)->offset(-1)->orderBy([])->count('*', $this->db);
+        ;
+        return (int) $this->query->count('*', $this->db);
     }
 
     /**
