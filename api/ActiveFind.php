@@ -178,14 +178,15 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         try {
             $result = $this->execute();
             $rows = $result->getRecords();
-            return $this->populate($rows);
         }
         catch (\Exception $e){
             if( $e->getCode() == 401 ){
                 return [];
             }
-            throw new \Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
+            throw new \Exception($e->getMessage(), (int) $e->getCode(), $e);
         }
+        
+        return $this->populate($rows);
     }
     
     /**
@@ -405,14 +406,15 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         try {
             $result = $this->execute();
             $rows = $result->getFirstRecord();
-            return $this->populate([$rows])[0];
         }
         catch (\Exception $e){
             if( $e->getCode() == 401 ){
                 return null;
             }
-            throw new Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
+            throw new \Exception($e->getMessage(), (int) $e->getCode(), $e);
         }
+        
+        return $this->populate([$rows])[0];
     }
     
     /**
