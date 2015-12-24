@@ -93,6 +93,61 @@ class Generator extends \yii\gii\generators\crud\Generator
         }
         return implode ( "\r\n", $models);
     }
+    /**
+     * Generates search conditions
+     * @return array
+     */
+    public function generateSearchConditions()
+    {
+        $columns = [];
+        if (($table = $this->getTableSchema()) === false) {
+            $class = $this->modelClass;
+            /* @var $model \yii\base\Model */
+            $model = new $class();
+            foreach ($model->attributes() as $attribute) {
+                $columns[$attribute] = 'unknown';
+            }
+        } else {
+            foreach ($table->columns as $column) {
+                $columns[$column->name] = $column->type;
+            }
+        }
+
+        $likeConditions = [];
+        $hashConditions = [];
+        foreach ($columns as $column => $type) {
+            switch ($type) {
+                case Schema::TYPE_SMALLINT:
+                case Schema::TYPE_INTEGER:
+                case Schema::TYPE_BIGINT:
+                case Schema::TYPE_BOOLEAN:
+                case Schema::TYPE_FLOAT:
+                case Schema::TYPE_DECIMAL:
+                case Schema::TYPE_MONEY:
+                case Schema::TYPE_DATE:
+                case Schema::TYPE_TIME:
+                case Schema::TYPE_DATETIME:
+                case Schema::TYPE_TIMESTAMP:
+                    $hashConditions[] = "'{$column}' => \$this->{$column},";
+                    break;
+                default:
+                    $hashConditions[] = "'{$column}' => \$this->{$column},";
+                    break;
+            }
+        }
+
+        $conditions = [];
+        if (!empty($hashConditions)) {
+            $conditions[] = "\$query->andFilterWhere([\n"
+                . str_repeat(' ', 12) . implode("\n" . str_repeat(' ', 12), $hashConditions)
+                . "\n" . str_repeat(' ', 8) . "]);\n";
+        }
+        if (!empty($likeConditions)) {
+            $conditions[] = "\$query" . implode("\n" . str_repeat(' ', 12), $likeConditions) . ";\n";
+        }
+
+        return $conditions;
+    }
     
     /**
      * Generates validation rules for the search model.
