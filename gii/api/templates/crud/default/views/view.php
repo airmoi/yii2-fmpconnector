@@ -47,7 +47,7 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
 } else {
     
     foreach ($generator->getTableSchema()->columns as $column) {
-        if ($column->dbType == 'binary') {
+        if ($column->dbType == 'container') {
             echo "            [\n"
                . "              'attribute' => '".$column->name."',\n"
                . "              'format' => 'image',\n"
