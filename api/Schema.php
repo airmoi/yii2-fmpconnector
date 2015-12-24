@@ -172,6 +172,14 @@ class Schema extends \yii\db\Schema
         if ( sizeof( $fields ) == 0)
                 return false;
         
+        $table->columns['_recid'] = $this->createColumnSchema();
+        $table->columns['_recid']->name = '_recid';
+        $table->columns['_recid']->allowNull = false;
+        $table->columns['_recid']->isPrimaryKey = true;
+        $table->columns['_recid']->autoIncrement = true;
+        $table->columns['_recid']->phpType = 'integer';
+        $table->primaryKey[] = '_recid';
+        
         foreach ($fields as $field) {
             $column = $this->loadColumnSchema($field);
             
@@ -195,13 +203,6 @@ class Schema extends \yii\db\Schema
                 $table->primaryKey[] = $column->name;
             }*/
         }
-        $table->columns['_recid'] = $this->createColumnSchema();
-        $table->columns['_recid']->name = '_recid';
-        $table->columns['_recid']->allowNull = false;
-        $table->columns['_recid']->isPrimaryKey = true;
-        $table->columns['_recid']->autoIncrement = true;
-        $table->columns['_recid']->phpType = 'integer';
-        $table->primaryKey[] = '_recid';
         return true;
     }
 

@@ -114,6 +114,17 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     }
     
     /**
+     * get filename of a container attribute
+     * @param string $attribute the container attribute name
+     * @return string the filename
+     */
+    public function getContainerFileName($attribute) {
+        $uri = $this->$attribute;
+        $name = basename($uri);
+        return substr($name, 0, strpos($name, "?"));
+    }
+    
+    /**
      * Return the layout name use by this model
      * @return string
      */
@@ -124,6 +135,22 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         }
         return static::$_layout[static::layoutName()];
     }
+
+    /**
+     * Returns the schema information of the DB table associated with this AR class.
+     * @return TableSchema the schema information of the DB table associated with this AR class.
+     * @throws InvalidConfigException if the table for the AR class does not exist.
+     */
+    public static function getTableSchema()
+    {
+        $schema = static::getDb()->getSchema()->getTableSchema(static::layoutName());
+        if ($schema !== null) {
+            return $schema;
+        } else {
+            throw new InvalidConfigException("The table does not exist: " . static::layoutName());
+        }
+    }
+    
     
     public function load($data, $formName = NULL ) {
         $loaded = (int) parent::load($data);

@@ -45,6 +45,7 @@ use yii\base\UnknownMethodException;
  * @method \airmoi\FileMaker\Command\FindRequest newFindRequest($layout) Creates a new FindRequest object.
  * @method \airmoi\FileMaker\Command\PerformScript newPerformScriptCommand($layout, $scriptName, $scriptParameters = null) Creates a new PerformScript object.
  * 
+ * 
  * @method string getLastRequestedUrl() Last URL call to xml engine.
  * 
  * @method null setProperty($prop, $value) Sets a property to a new value for all API calls.
