@@ -210,12 +210,12 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         parent::populateRecord($record, $row);
         
         //Populate relations
-        foreach ( static::getDb()->getSchema()->getTableSchema(static::layoutName())->relations as $relationName => $relationConfig){
-            if( !$relationConfig[0] ){
-                $record->populateHasOneRelation($relationName, $relationConfig[1]->columns, $fmRecord);
+        foreach ( static::getDb()->getSchema()->getTableSchema(static::layoutName())->relations as $relationName => $tableSchema){
+            if( !$tableSchema->isPortal ){
+                $record->populateHasOneRelation($relationName, $tableSchema, $fmRecord);
             }
             else {
-                $record->populateHasManyRelation($relationName, $relationConfig[1]->columns, $fmRecord);
+                $record->populateHasManyRelation($relationName, $tableSchema, $fmRecord);
             }
         }
 
@@ -225,18 +225,18 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     /**
      * 
      * @param string $relationName
-     * @param ColumnSchema[] $fields
+     * @param TableSchema $tableSchema
      * @param \airmoi\FileMaker\Object\Record $record
      */
-    protected function populateHasOneRelation( $relationName, $fields, \airmoi\FileMaker\Object\Record $record) {
+    protected function populateHasOneRelation( $relationName, TableSchema $tableSchema, \airmoi\FileMaker\Object\Record $record) {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
         
         $model = $modelClass::instantiate([]);
-        \Yii::configure($model, ['isPortal' => false, 'parent' => $this, 'relationName' => $relationName]);
+        \Yii::configure($model, ['isPortal' => false, 'parent' => $this, 'relationName' =>$relationName, 'tableOccurence' => $tableSchema->name]);
         
         $row = [];
-        foreach ( $fields as $fieldName => $config){
-            $row[$fieldName] = $record->getField($relationName . '::' . $fieldName);
+        foreach ( $tableSchema->columns as $fieldName => $config){
+            $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
         }
         
         parent::populateRecord($model, $row);
@@ -250,18 +250,18 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      * @param ColumnSchema[] $fields
      * @param \airmoi\FileMaker\Object\Record $record
      */
-    protected function populateHasManyRelation( $relationName, $fields, \airmoi\FileMaker\Object\Record $record) {
+    protected function populateHasManyRelation( $relationName, TableSchema $tableSchema, \airmoi\FileMaker\Object\Record $record) {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
         
-        $records = $record->getRelatedSet($relationName);
+        $records = $record->getRelatedSet($tableSchema->name);
         $models = [];
         
         foreach ( $records as $record ){
             $model = $modelClass::instantiate([]); 
-            \Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName]);
+            \Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName, 'tableOccurence' => $tableSchema->name]);
             $row = [];
-            foreach ( $fields as $fieldName => $config){
-                $row[$fieldName] = $record->getField($relationName . '::' . $fieldName);
+            foreach ( $tableSchema->columns  as $fieldName => $config){
+                $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
             }
 
             parent::populateRecord($model, $row);
@@ -306,7 +306,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
            $request->execute();
            return 1;
         } catch (\Exception $e) {
-            throw $e;
+            throw new \yii\db\Exception($e->getMessage() . '(' . $e->getCode() . ')', $e->getCode());
         }
     }
     
@@ -346,10 +346,16 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
     public $parent;
     
     /**
-     * Name of the FileMaker related table
+     * Name of the relation)
      * @var string
      */
     public $relationName;
+    
+    /**
+     * Name of the FileMaker table occurrence the related record is based on
+     * @return string
+     */
+    public $tableOccurence;
     
     public function parentLayoutName() {
         return $this->getParent()->layoutName();
@@ -362,7 +368,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
      */
     public function attributes()
     {
-        $relationSchema = $this->getParent()->getDb()->getSchema()->getTableSchema($this->parentLayoutName())->relations[$this->relationName][1];
+        $relationSchema = $this->getParent()->getDb()->getSchema()->getTableSchema($this->parentLayoutName())->relations[$this->relationName];
         $keys = array_keys($relationSchema->columns);
         return $keys;
     }
@@ -397,7 +403,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
         
         $prefixedValues = [];
         foreach ( $values as $field => $value ){
-            $prefixedValues[$this->relationName.'::'.$field] = $value;
+            $prefixedValues[$this->tableOccurence.'::'.$field] = $value;
         }
         
         return $prefixedValues;

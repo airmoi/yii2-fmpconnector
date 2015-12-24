@@ -34,7 +34,7 @@ use airmoi\yii2fmconnector\api\FileMakerRelatedRecord;
 <?php if (!empty($relations)): ?>
  *
 <?php foreach ($relations as $name => $relation): ?>
- * @property <?= ucfirst($name) .($relation[0] ? '[]' : '' ) . ' $' . lcfirst($name) . "\n" ?>
+ * @property <?= ucfirst($name) .($relation->isPortal ? '[]' : '' ) . ' $' . lcfirst($name) . "\n" ?>
 <?php endforeach; ?>
 <?php endif; ?>
  */
@@ -96,10 +96,10 @@ class <?= $className ?> extends FileMakerActiveRecord
 
 <?php if (!empty($relations)): ?>
 <?php foreach ($relations as $name => $relation): ?>
-<?php $rules = $generator->generateRules($relation[1]) ?>
+<?php $rules = $generator->generateRules($relation) ?>
 /*
  * This is the model class for related records "<?= $generator->generateTableName($name) ?>".
-<?php foreach ($relation[1]->columns as $column): ?>
+<?php foreach ($relation->columns as $column): ?>
  * @property <?= "{$column->phpType} \${$column->name}\n" ?>
 <?php endforeach; ?>
  */
@@ -118,7 +118,7 @@ class <?= $className ?> extends FileMakerActiveRecord
     public function attributeLabels()
     {
         return [
-<?php foreach ($relation[1]->columns as $column): ?>
+<?php foreach ($relation->columns as $column): ?>
             <?= "'$column->name' => " . $generator->generateString($name . ' ' . $column->name) . ",\n" ?>
 <?php endforeach; ?>
         ];

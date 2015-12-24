@@ -16,11 +16,16 @@ namespace airmoi\yii2fmconnector\api;
 class TableSchema extends \yii\db\TableSchema
 {
     /**
+     *
+     * @var bool 
+     */
+    public $isPortal = false;
+    /**
      * 
-     * @var ColumnSchema[] Array of ColumnSchema indexed by relation name (OT)
+     * @var TableSchema[] Array of ColumnSchema indexed by relation name (OT)
      */
     public $relations = [];
-    
+
     /**
      *
      * @var array Value lists names

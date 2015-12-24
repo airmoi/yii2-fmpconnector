@@ -180,7 +180,7 @@ class Schema extends \yii\db\Schema
                 if( !isset($table->relations[$column->relationName])){
                     $tableSchema =  new TableSchema();
                     $tableSchema->name = $tableSchema->fullName = $column->relationName;
-                    $table->relations[$column->relationName] = [0,$tableSchema];
+                    $table->relations[$column->relationName] = $tableSchema;
                 }
                 else {
                     $tableSchema = $table->relations[$column->relationName][1];
@@ -244,23 +244,33 @@ class Schema extends \yii\db\Schema
     protected function findConstraints($table)
     {  
         foreach( $this->getLayout($table->name)->getRelatedSets() as $relation){
-            $tableSchema = new TableSchema();
-            $tableSchema->fullName = $tableSchema->name = $relation->name;
+            
+            // Check if portal of the same related table was already declared
+            $relationName = $relation->name . '_portal';
+            if(isset($table->relations[$relationName])) {
+                $tableSchema = $table->relations[$relationName];
+            } else{
+                $tableSchema = new TableSchema();
+                $tableSchema->name = $relation->name;
+                $tableSchema->fullName =  $relationName;
+                $tableSchema->isPortal = true;
+                
+                //Store _recid PK as field
+                $pk = $this->createColumnSchema();
+                $pk->name = '_recid';
+                $pk->allowNull = false;
+                $pk->isPrimaryKey = true;
+                $pk->autoIncrement = true;
+                $pk->phpType = 'integer';
+            
+                $tableSchema->columns['_recid'] = $pk;
+            }
             foreach( $relation->getFields() as $field ){
                 $column = $this->loadColumnSchema($field);
                 $tableSchema->columns[$column->name] = $column;
             }
-            
-            $pk = $this->createColumnSchema();
-            $pk->name = '_recid';
-            $pk->allowNull = false;
-            $pk->isPrimaryKey = true;
-            $pk->autoIncrement = true;
-            $pk->phpType = 'integer';
-            
-            $tableSchema->columns['_recid'] = $pk;
-            
-            $table->relations[$relation->name] = [1, $tableSchema] ;
+ 
+            $table->relations[$relationName] = $tableSchema ;
         }
     }
      
