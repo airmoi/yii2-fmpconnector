@@ -26,7 +26,7 @@ namespace <?= StringHelper::dirname(ltrim($generator->searchModelClass, '\\')) ?
 
 use Yii;
 use yii\base\Model;
-use yii\data\ActiveDataProvider;
+use airmoi\yii2fmconnector\api\ActiveDataProvider;
 use <?= ltrim($generator->modelClass, '\\') . (isset($modelAlias) ? " as $modelAlias" : "") ?>;
 
 /**
