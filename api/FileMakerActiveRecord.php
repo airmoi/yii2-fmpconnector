@@ -125,6 +125,17 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         return static::$_layout[static::layoutName()];
     }
     
+    public function load($data, $formName = NULL ) {
+        $loaded = (int) parent::load($data);
+        
+        foreach ($this->getRelatedRecords() as $relationName => $records) {
+            if($records instanceof FileMakerRelatedRecord && !$records->isPortal){
+                $loaded += (int)$records->load($data);
+            }
+        }
+        return $loaded > 0;
+    }
+    
     /**
      * Inserts a row into the associated database table using the attribute values of this record.
      *
@@ -201,10 +212,10 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         //Populate relations
         foreach ( static::getDb()->getSchema()->getTableSchema(static::layoutName())->relations as $relationName => $relationConfig){
             if( !$relationConfig[0] ){
-                $record->populateHasOneRelation($relationName, $relationConfig[1], $fmRecord);
+                $record->populateHasOneRelation($relationName, $relationConfig[1]->columns, $fmRecord);
             }
             else {
-                $record->populateHasManyRelation($relationName, $relationConfig[1], $fmRecord);
+                $record->populateHasManyRelation($relationName, $relationConfig[1]->columns, $fmRecord);
             }
         }
 
@@ -220,10 +231,15 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     protected function populateHasOneRelation( $relationName, $fields, \airmoi\FileMaker\Object\Record $record) {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
         
-        $model = new $modelClass();
+        $model = $modelClass::instantiate([]);
+        \Yii::configure($model, ['isPortal' => false, 'parent' => $this, 'relationName' => $relationName]);
+        
+        $row = [];
         foreach ( $fields as $fieldName => $config){
-            $model->$fieldName = $record->getField($relationName . '::' . $fieldName);
+            $row[$fieldName] = $record->getField($relationName . '::' . $fieldName);
         }
+        
+        parent::populateRecord($model, $row);
         
         $this->populateRelation($relationName, $model);
     }
@@ -240,12 +256,16 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         $records = $record->getRelatedSet($relationName);
         $models = [];
         
-        foreach ( $records as $record ){ 
-            $model = new $modelClass();
+        foreach ( $records as $record ){
+            $model = $modelClass::instantiate([]); 
+            \Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName]);
+            $row = [];
             foreach ( $fields as $fieldName => $config){
-                $model->$fieldName = $record->getField($relationName . '::' . $fieldName);
-            } 
-            $model->$fieldName = $record->getRecordId();
+                $row[$fieldName] = $record->getField($relationName . '::' . $fieldName);
+            }
+
+            parent::populateRecord($model, $row);
+            $model->_recid = $record->getRecordId();
             $models[$record->getRecordId()] = $model;
         }
         
@@ -289,35 +309,6 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             throw $e;
         }
     }
-}
-
-class FileMakerRelatedRecord extends Model 
-{
-    /**
-     * @var array attribute values indexed by attribute names
-     */
-    protected $_attributes = [];
-    /**
-     * @var array|null old attribute values indexed by attribute names.
-     * This is `null` if the record [[isNewRecord|is new]].
-     */
-    private $_oldAttributes;
-    
-    
-    public function attributes()
-    {
-        return $this->_attributes;
-    }
-
-    /**
-     * Returns a value indicating whether the model has an attribute with the specified name.
-     * @param string $name the name of the attribute
-     * @return boolean whether the model has an attribute with the specified name.
-     */
-    public function hasAttribute($name)
-    {
-        return isset($this->_attributes[$name]) || in_array($name, $this->attributes());
-    }
     
     /**
      * Returns the attribute values that have been modified since they are loaded or saved most recently.
@@ -327,97 +318,89 @@ class FileMakerRelatedRecord extends Model
      */
     public function getDirtyAttributes($names = null)
     {
-        if ($names === null) {
-            $names = $this->attributes();
-        }
-        $names = array_flip($names);
-        $attributes = [];
-        if ($this->_oldAttributes === null) {
-            foreach ($this->_attributes as $name => $value) {
-                if (isset($names[$name])) {
-                    $attributes[$name] = $value;
-                }
-            }
-        } else {
-            foreach ($this->_attributes as $name => $value) {
-                if (isset($names[$name]) && (!array_key_exists($name, $this->_oldAttributes) || $value !== $this->_oldAttributes[$name])) {
-                    $attributes[$name] = $value;
-                }
+        $values = parent::getDirtyAttributes($names);
+        
+        //Get updated related records values that are not in portals
+        foreach ( $this->getRelatedRecords() as $relationName => $records ){
+            if ( $records instanceof FileMakerRelatedRecord){
+                $values = ArrayHelper::merge($values, $records->getDirtyAttributes($names));
             }
         }
-        return $attributes;
+        
+        return $values;
+    }
+}
+
+class FileMakerRelatedRecord extends FileMakerActiveRecord 
+{
+    /**
+     * Whether the related record is part of a portal
+     * @var bool 
+     */
+    public $isPortal;
+    
+    /**
+     *
+     * @var FileMakerActiveRecord
+     */
+    public $parent;
+    
+    /**
+     * Name of the FileMaker related table
+     * @var string
+     */
+    public $relationName;
+    
+    public function parentLayoutName() {
+        return $this->getParent()->layoutName();
     }
     
     /**
-     * PHP getter magic method.
-     * This method is overridden so that attributes and related objects can be accessed like properties.
-     *
-     * @param string $name property name
-     * @throws \yii\base\InvalidParamException if relation name is wrong
-     * @return mixed property value
-     * @see getAttribute()
+     * Returns the list of all attribute names of the model.
+     * The default implementation will return all column names of the table associated with this AR class.
+     * @return array list of attribute names.
      */
-    public function __get($name)
+    public function attributes()
     {
-        if (isset($this->_attributes[$name]) || array_key_exists($name, $this->_attributes)) {
-            return $this->_attributes[$name];
-        } elseif ($this->hasAttribute($name)) {
-            return null;
-        } else {
-            if (isset($this->_related[$name]) || array_key_exists($name, $this->_related)) {
-                return $this->_related[$name];
-            }
-            $value = parent::__get($name);
-            if ($value instanceof ActiveQueryInterface) {
-                return $this->_related[$name] = $value->findFor($name, $this);
-            } else {
-                return $value;
-            }
-        }
+        $relationSchema = $this->getParent()->getDb()->getSchema()->getTableSchema($this->parentLayoutName())->relations[$this->relationName][1];
+        $keys = array_keys($relationSchema->columns);
+        return $keys;
     }
-
+    
     /**
-     * PHP setter magic method.
-     * This method is overridden so that AR attributes can be accessed like properties.
-     * @param string $name property name
-     * @param mixed $value property value
+     * 
+     * @return FileMakerActiveRecord
      */
-    public function __set($name, $value)
+    public function getParent() {
+        return $this->parent;
+    }
+    
+    public function update($runValidation = true, $attributeNames = null)
     {
-        if ($this->hasAttribute($name)) {
-            $this->_attributes[$name] = $value;
+        if(!$this->isPortal()){
+            return $this->getParent()->update($runValidation, $attributeNames);
         } else {
-            parent::__set($name, $value);
+            throw new \yii\base\NotSupportedException('You cannot edit a related records in portal views');
         }
     }
-
+    
     /**
-     * Checks if a property value is null.
-     * This method overrides the parent implementation by checking if the named attribute is null or not.
-     * @param string $name the property name or the event name
-     * @return boolean whether the property value is null
+     * Returns the attribute values that have been modified since they are loaded or saved most recently.
+     * Prefix the relation tableName to field names
+     * @param string[]|null $names the names of the attributes whose values may be returned if they are
+     * changed recently. If null, [[attributes()]] will be used.
+     * @return array the changed attribute values (name-value pairs)
      */
-    public function __isset($name)
+    public function getDirtyAttributes($names = null)
     {
-        try {
-            return $this->__get($name) !== null;
-        } catch (\Exception $e) {
-            return false;
+        $values = parent::getDirtyAttributes($names);
+        
+        $prefixedValues = [];
+        foreach ( $values as $field => $value ){
+            $prefixedValues[$this->relationName.'::'.$field] = $value;
         }
+        
+        return $prefixedValues;
     }
-
-    /**
-     * Sets a component property to be null.
-     * This method overrides the parent implementation by clearing
-     * the specified attribute value.
-     * @param string $name the property name or the event name
-     */
-    public function __unset($name)
-    {
-        if ($this->hasAttribute($name)) {
-            unset($this->_attributes[$name]);
-        } else {
-            parent::__unset($name);
-        }
-    }
+    
 }
