@@ -75,6 +75,8 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
 ?>
         ],
     ]) ?>
+    
+    
 <?=  '<?php'  ?> $parentId = $model->_recid; ?>
 <?php
 //Build portals
@@ -82,10 +84,18 @@ if($tableSchema !== false){
     //Single related fields
     foreach ($tableSchema->relations as $relatedTableSchema){
         if($relatedTableSchema->isPortal) {
-            ?><h1><?= Html::encode($relatedTableSchema->name) ?></h1>
+            ?>
+<h1><?= Html::encode($relatedTableSchema->name) ?></h1>
 <?=  '<?='  ?>  
 GridView::widget([
-    'dataProvider' => new ArrayDataProvider(['id' => '<?= Inflector::camel2id($relatedTableSchema->fullName) ?>', 'allModels' => $model-><?= $relatedTableSchema->fullName ?>]),
+    'dataProvider' => new ArrayDataProvider([
+        'id' => '<?= Inflector::camel2id($relatedTableSchema->fullName) ?>',
+        'allModels' => $model-><?= $relatedTableSchema->fullName ?>,      
+        'pagination' => [
+            'pageSize' => 10,
+            'pageParam' => 'page-<?= $relatedTableSchema->fullName ?>',
+        ],
+    ]),
     'columns' => [
         ['class' => 'yii\grid\SerialColumn'],
         <?php 
@@ -117,12 +127,13 @@ GridView::widget([
                     }
                 }
             }
-        }
-    }
         ?>
         ],
     ]
-);<?php   
+); ?>
+<?php 
+        }
+    }  
 } 
-?>?>
+?>
 </div>
