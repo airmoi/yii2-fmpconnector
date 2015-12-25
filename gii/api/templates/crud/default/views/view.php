@@ -2,6 +2,7 @@
 
 use yii\helpers\Inflector;
 use yii\helpers\StringHelper;
+use yii\helpers\Html;
 
 /* @var $this yii\web\View */
 /* @var $generator airmoi\yii2fmconnector\gii\api\crud\Generator */
@@ -10,9 +11,10 @@ $urlParams = $generator->generateUrlParams();
 
 echo "<?php\n";
 ?>
-//test
 use yii\helpers\Html;
 use yii\widgets\DetailView;
+use <?= $generator->indexWidgetType === 'grid' ? "yii\\grid\\GridView" : "yii\\widgets\\ListView" ?>;
+use yii\data\ArrayDataProvider;
 
 /* @var $this yii\web\View */
 /* @var $model <?= ltrim($generator->modelClass, '\\') ?> */
@@ -61,11 +63,11 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
     }
     
     //Single related fields
-    foreach ($generator->getTableSchema()->relations as $tableSchema){
-        if(!$tableSchema->isPortal) {
-            foreach( $tableSchema->columns as $column) {  
+    foreach ($generator->getTableSchema()->relations as $relatedTableSchema){
+        if(!$relatedTableSchema->isPortal) {
+            foreach( $relatedTableSchema->columns as $column) {  
                 $format = $generator->generateColumnFormat($column);
-                echo "            '" . $tableSchema->fullName . '.' . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+                echo "            '" . $relatedTableSchema->fullName . '.' . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
             }
         }
     }
@@ -73,5 +75,54 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
 ?>
         ],
     ]) ?>
-
+<?=  '<?php'  ?> $parentId = $model->_recid; ?>
+<?php
+//Build portals
+if($tableSchema !== false){
+    //Single related fields
+    foreach ($tableSchema->relations as $relatedTableSchema){
+        if($relatedTableSchema->isPortal) {
+            ?><h1><?= Html::encode($relatedTableSchema->name) ?></h1>
+<?=  '<?='  ?>  
+GridView::widget([
+    'dataProvider' => new ArrayDataProvider(['id' => '<?= Inflector::camel2id($relatedTableSchema->fullName) ?>', 'allModels' => $model-><?= $relatedTableSchema->fullName ?>]),
+    'columns' => [
+        ['class' => 'yii\grid\SerialColumn'],
+        <?php 
+            $count = 0;
+            foreach( $relatedTableSchema->columns as $column) { 
+                if (++$count < 6) {
+                    if ($column->dbType == 'container') {
+                        echo "            [\n"
+                           . "              'attribute' => '".$column->name."',\n"
+                           . "              'format' => 'image',\n"
+                           . "              'value' => function(\$model) use (\$parentId) { return yii\helpers\Url::to(['container', 'id' => \$parentId, 'field' => '".$relatedTableSchema->fullName . "::" . $column->name."::'.\$model->".$tableSchema->primaryKey[0]."]);},\n"
+                           ."            ],\n";
+                    }
+                    else {
+                        $format = $generator->generateColumnFormat($column);
+                        echo "            '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+                    }
+                } else {
+                    if ($column->dbType == 'container') {
+                        echo "            //[\n"
+                           . "            //    'attribute' => '".$column->name."',\n"
+                           . "            //    'format' => 'image',\n"
+                           . "            //    'value' => function(\$model) use (\$parentId) { return yii\helpers\Url::to(['container', 'id' => \$parentId, 'field' => '".$relatedTableSchema->fullName . "::" . $column->name."::'.\$model->".$tableSchema->primaryKey[0]."]);},\n"
+                           . "            //],\n";
+                    }
+                    else {
+                        $format = $generator->generateColumnFormat($column);
+                        echo "            //'" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+                    }
+                }
+            }
+        }
+    }
+        ?>
+        ],
+    ]
+);<?php   
+} 
+?>?>
 </div>
