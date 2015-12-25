@@ -153,7 +153,14 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
     public function actionContainer($id, $field)
     {
         $model = $this->findModel($id);
-        $url = $model->$field;
+        
+        if ( $pos = strpos($field, '::') ){
+            list ( $relation, $field, $recid) = explode ( "::", $field );
+            $url = $model->$relation[$recid]->$field;
+        } else {
+            $url = $model->$field;
+        }
+        
         $fileName = $model->getContainerFileName($field);
 
         \Yii::$app->response->format = \yii\web\Response::FORMAT_RAW;
