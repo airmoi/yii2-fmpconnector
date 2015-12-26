@@ -80,6 +80,15 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public $layout;
     
     /**
+     * Layout's name on which the query is based
+     * @var string 
+     */
+    public $resultLayout;
+    
+    public $relatedSetFilter = 'layout';
+    public $relatedSetMax = null;
+    
+    /**
      *
      * @var Connection 
      */
@@ -93,6 +102,11 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * will be converted into strings without any change.
      */
     public $orderBy = [];
+    /**
+     * @var array scripts to be executed before / after find and before sort
+     *  
+     */
+    private $_scripts = [];
     /**
      * @var string|callable $column the name of the column by which the query results should be indexed by.
      * This can also be a callable (e.g. anonymous function) that returns the index value based on the given
@@ -144,7 +158,8 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function __construct($modelClass, $config = [])
     {
         $this->modelClass = $modelClass;
-        $this->layout = $modelClass::layoutName();
+        $this->layout = $modelClass::searchLayoutName();
+        $this->resultLayout = $modelClass::layoutName();
         $this->db = $modelClass::getDb();
         
         parent::__construct($config);
@@ -228,6 +243,18 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->offset = $this->offset == -1 ? null: $this->offset;
         $this->limit = $this->limit == -1 ? null: $this->limit;
         $this->_cmd->setRange($this->offset, $this->limit);
+        $this->_cmd->setResultLayout($this->resultLayout);
+        $this->_cmd->setRelatedSetsFilters($this->relatedSetFilter, $this->relatedSetMax);
+        
+        foreach ( $this->_scripts as $position => $scriptOptions){
+            if($position == 'beforeFind'){
+                $this->_cmd->setPreCommandScript($scriptOptions[0], $scriptOptions[1]);
+            } elseif($position == 'beforeSort'){
+                $this->_cmd->setPreSortScript($scriptOptions[0], $scriptOptions[1]);
+            } elseif($position == 'afterFind'){
+                $this->_cmd->setScript($scriptOptions[0], $scriptOptions[1]);
+            }
+        }
     }
     
     /**
@@ -242,7 +269,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
             
             try {
                 $this->_result = $this->_cmd->execute();
-                $this->_count = $this->_result->getTableRecordCount();
+                $this->_count = $this->_result->getFoundSetCount();
                 Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
                 
             } catch (airmoi\FileMaker\FileMakerException $e){
@@ -515,7 +542,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
 
     /**
      * Adds an additional WHERE condition to the existing one.
-     * The new condition and the existing one will be joined using the 'OR' operator.
+     * This will create a new find request that will act as a 'OR' request
      * @param string|array $condition the new WHERE condition. Please refer to [[where()]]
      * on how to specify this parameter.
      * @return static the query object itself
@@ -531,6 +558,37 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->_requests[] = $this->_currentRequest;
         $this->andWhere($condition);
         return $this;
+    }
+
+    /**
+     * Adds a 'ommit' request .
+     * @param string|array $condition the new WHERE condition. Please refer to [[where()]]
+     * on how to specify this parameter.
+     * @return static the query object itself
+     * @see where()
+     * @see andWhere()
+     */
+    public function exceptWhere($condition, $layout = null)
+    {
+        if( $layout === null ) {
+            $layout = $this->layout;
+        }
+        $this->_currentRequest = $this->db->newFindRequest($layout);
+        $this->_requests[] = $this->_currentRequest;
+        $this->andWhere($condition);
+        return $this;
+    }
+    
+    public function addPreFindScript ($scriptname, $scriptParams = null){
+        $this->_scripts['beforeFind'] = [$scriptname, $scriptParams];
+    }
+    
+    public function addPreSortScript ($scriptname, $scriptParams = null){
+        $this->_scripts['beforeSort'] = [$scriptname, $scriptParams];
+    }
+    
+    public function addAfterFindScript ($scriptname, $scriptParams = null){
+        $this->_scripts['afterFind'] = [$scriptname, $scriptParams];
     }
 
     /**
@@ -665,8 +723,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $command = ['layout' => $this->layout];
         $command['method'] = get_class($this->_cmd);
         if($this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind){
+            $command['requests'] = [];
             foreach( $this->_requests as $request ){
-               $command['method']['requests'][] = $request->findCriteria;
+               $command['requests'][] = $request->findCriteria;
             }
         } 
         $command['offset'] = $this->offset;
@@ -680,5 +739,38 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->_cmd = $this->db->newFindCommand($this->layout);
         $this->_cmd->setRecordId($id);
         return $this->one();
+    }
+    
+    /**
+     * Sets a filter to restrict the number of related records to return from 
+     * a portal. 
+     *
+     * The filter limits the number of related records returned by respecting 
+     * the settings specified in the FileMaker Pro Portal Setup dialog box. 
+     *
+     * @param string $relatedsetsfilter Specify one of these values to  
+     *        control filtering: 
+     *        - 'layout': Apply the settings specified in the FileMaker Pro 
+     *                    Portal Setup dialog box. The records are sorted based 
+     *                    on the sort  defined in the Portal Setup dialog box, 
+     *                    with the record set filtered to start with the 
+     *                    specified "Initial row."
+     *        - 'none': Return all related records in the portal without 
+     *                  filtering or presorting them.
+     * 
+     * @param string $relatedsetsmax If the "Show vertical scroll bar" setting 
+     *        is enabled in the Portal Setup dialog box, specify one of these 
+     *        values:
+     *        - an integer value: Return this maximum number of related records 
+     *                            after the initial record.
+     *        - 'all': Return all of the related records in the portal.
+     *                 If "Show vertical scroll bar" is disabled, the Portal 
+     *                 Setup dialog box's "Number of rows" setting determines 
+     *                 the maximum number of related records to return. 
+     */
+    public function setRelatedSetsFilters($relatedsetsfilter, $relatedsetsmax = null)
+    {
+    	$this->relatedSetFilter = $relatedsetsfilter;
+        $this->relatedSetMax = $relatedsetsmax;
     }
 }

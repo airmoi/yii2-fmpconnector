@@ -71,6 +71,14 @@ class <?= $className ?> extends FileMakerActiveRecord
     {
         return '<?= $generator->generateTableName($tableName) ?>';
     }
+    
+    /**
+     * @var string default FileMaker layout to be used for search queries
+     */
+    public static function searchLayoutName()
+    {
+        return '<?= $generator->generateTableName($tableName) ?>';
+    }
 <?php if ($generator->db !== 'db'): ?>
 
     /**

@@ -109,8 +109,18 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         return self::find()->andWhere($condition)->one();
     }
     
+    /**
+     * @var string default FileMaker layout used by this model
+     */
     public static function layoutName() {
         throw new \yii\base\NotSupportedException('layoutName Method should be overidded');
+    }
+    
+    /**
+     * @var string default FileMaker layout to be used for search queries
+     */
+    public static function searchLayoutName() {
+        return static::layoutName();
     }
     
     /**
