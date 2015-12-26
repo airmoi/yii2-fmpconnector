@@ -280,7 +280,11 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     protected function populateHasManyRelation( $relationName, TableSchema $tableSchema, \airmoi\FileMaker\Object\Record $record) {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
         
-        $records = $record->getRelatedSet($tableSchema->name);
+        try {
+            $records = $record->getRelatedSet($tableSchema->name);
+        } catch (\Exception $e){
+            return;
+        }
         $models = [];
         
         foreach ( $records as $record ){
