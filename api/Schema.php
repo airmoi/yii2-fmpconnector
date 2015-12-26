@@ -112,7 +112,7 @@ class Schema extends \yii\db\Schema
     
     public function findLayoutsFromSameTable(TableSchema $table) {
         foreach( $this->findTableNames() as $layoutName ) {
-            if($layoutName == $table->name){
+            if($layoutName == $table->name || $layoutName == ''){
                 continue;
             }
             if ( $this->getlayout($layoutName)->table == $table->baseTable ){
@@ -230,7 +230,7 @@ class Schema extends \yii\db\Schema
                 Yii::info($token, __METHOD__);
                 Yii::beginProfile($token, __METHOD__);
                 
-                $layouts = $this->db->listLayouts();
+                $layouts = array_filter($this->db->listLayouts());
                 Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
             } catch (airmoi\FileMaker\FileMakerException $e){
                 Yii::endProfile($token, __METHOD__);
