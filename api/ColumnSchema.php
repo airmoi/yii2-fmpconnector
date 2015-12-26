@@ -25,6 +25,8 @@ class ColumnSchema extends \yii\db\ColumnSchema
     
     public $isRelated;
     public $relationName;
+    
+    public $valueList;
     /**
      * Converts the input value according to [[phpType]] after retrieval from the database.
      * If the value is null or an [[Expression]], it will not be converted.
@@ -51,12 +53,8 @@ class ColumnSchema extends \yii\db\ColumnSchema
                 return (double) $value;
             case 'date':
                 return (string) $value;
-                //$date = \DateTime::createFromFormat('Y-m-d', ($value));
-                //return $date->format('d/m/Y');
             case 'timestamp':
                 return (string) $value;
-               // $date = \DateTime::createFromFormat('Y-m-d H:i:s', $value);
-               //return $date->format('d/m/Y H:i:s');
         }
 
         return $value;
@@ -71,19 +69,8 @@ class ColumnSchema extends \yii\db\ColumnSchema
      */
     public function dbTypecast($value)
     {
-       if( (  $value==='' || $value===null ) && $this->allowNull)
-			return '';
-       
-		switch($this->dbType)
-		{
-			case 'varchar':
-                            return "••varchar••".$value;
-			case 'binary': return $value;
-			case 'decimal': return "••decimal••".$value;
-			//case 'time': return "{t $value}";
-			//case 'date': return "{d $value}";
-			///case 'timestamp': return "{ts $value}";
-			default: return $value;
-		}
+       if( (  $value==='' || $value===null ) && $this->allowNull) {
+            return '';
+       }
     }
 }

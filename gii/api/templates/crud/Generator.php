@@ -50,10 +50,8 @@ class Generator extends \yii\gii\generators\crud\Generator
             }
         }
         $column = $tableSchema->columns[$attribute];
-        if ($column->phpType === 'boolean') {
-            return "\$form->field($modelVar, '$attribute')->checkbox()";
-        } elseif ($column->type === 'text') {
-            return "\$form->field($modelVar, '$attribute')->textarea(['rows' => 6])";
+        if ($column->valueList !== null) {
+            return "\$form->field(\$model, '$attribute')->dropDownList(\$model->valueList('$attribute'))";
         } else {
             if (preg_match('/^(password|pass|passwd|passcode)$/i', $column->name)) {
                 $input = 'passwordInput';
@@ -109,6 +107,10 @@ class Generator extends \yii\gii\generators\crud\Generator
             }
         } else {
             foreach ($table->columns as $column) {
+                //Ignore _recid (not a real field)
+                if($column->name == '_recid'){
+                    continue;
+                }
                 $columns[$column->name] = $column->type;
             }
         }
@@ -116,7 +118,8 @@ class Generator extends \yii\gii\generators\crud\Generator
         $likeConditions = [];
         $hashConditions = [];
         foreach ($columns as $column => $type) {
-            switch ($type) {
+            $hashConditions[] = "'{$column}' => \$this->{$column},";
+            /*switch ($type) {
                 case Schema::TYPE_SMALLINT:
                 case Schema::TYPE_INTEGER:
                 case Schema::TYPE_BIGINT:
@@ -133,7 +136,7 @@ class Generator extends \yii\gii\generators\crud\Generator
                 default:
                     $hashConditions[] = "'{$column}' => \$this->{$column},";
                     break;
-            }
+            }*/
         }
 
         $conditions = [];
@@ -160,6 +163,10 @@ class Generator extends \yii\gii\generators\crud\Generator
         }
         $types = [];
         foreach ($table->columns as $column) {
+            //Ignore _recid (not a real field)
+            if($column->name == '_recid'){
+                continue;
+            }
             switch ($column->type) {
                 case Schema::TYPE_BINARY:
                     break;
@@ -171,11 +178,19 @@ class Generator extends \yii\gii\generators\crud\Generator
                 case Schema::TYPE_BOOLEAN:
                     $types['boolean'][] = $column->name;
                     break;
+                /* 
+                 * Numbers may be treated as "safe" to allow fileMaker search operators
+                 */
+                //case Schema::TYPE_FLOAT:
+                //case Schema::TYPE_DECIMAL:
+                //case Schema::TYPE_MONEY:
+                //   $types['number'][] = $column->name;
+                //    break;
+                
                 case Schema::TYPE_FLOAT:
                 case Schema::TYPE_DECIMAL:
                 case Schema::TYPE_MONEY:
-                    $types['number'][] = $column->name;
-                    break;
+                    
                 case Schema::TYPE_DATE:
                 case Schema::TYPE_TIME:
                 case Schema::TYPE_DATETIME:

@@ -44,7 +44,12 @@ class <?= $className ?> extends FileMakerActiveRecord
     /**
     * @var string the default layout used to retrieve records
     */
-    public static $layout = '<?= $generator->generateTableName($tableName) ?>';
+    public static $defaultLayoutName = '<?= $generator->generateTableName($tableName) ?>';
+    
+    /**
+    * @var string the default layout to use for find requests
+    */
+    public static $defaultSearchLayout = '<?= $generator->generateTableName($tableName) ?>';
     
     private static $_vList = [
         <?php foreach ($valueLists as $valueList): ?>
@@ -65,11 +70,25 @@ class <?= $className ?> extends FileMakerActiveRecord
     }
     
     /**
+     * @var array all available FileMaker layouts for this model
+     */
+    public function attributeValueLists()
+    {
+        return [
+<?php foreach ($tableSchema->columns as $column): 
+        if ($column->valueList !== null): ?>
+            '<?= $column->name ?>' => '<?= $column->valueList ?>',
+<?php   endif;   
+    endforeach; ?>
+        ];
+    }
+    
+    /**
      * @var string default FileMaker layout used by this model
      */
     public static function layoutName()
     {
-        return '<?= $generator->generateTableName($tableName) ?>';
+        return self::$defaultLayoutName;
     }
     
     /**
@@ -77,7 +96,7 @@ class <?= $className ?> extends FileMakerActiveRecord
      */
     public static function searchLayoutName()
     {
-        return '<?= $generator->generateTableName($tableName) ?>';
+        return self::$defaultSearchLayout;
     }
 <?php if ($generator->db !== 'db'): ?>
 

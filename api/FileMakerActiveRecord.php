@@ -110,10 +110,19 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     }
     
     /**
-     * @var string default FileMaker layout used by this model
+     * @return string default FileMaker layout used by this model
      */
     public static function layoutName() {
         throw new \yii\base\NotSupportedException('layoutName Method should be overidded');
+    }
+    
+    /**
+     * Map value lists associated with fields
+     * @return array associative array (field => valueListName)
+     * @throws \yii\base\NotSupportedException
+     */
+    public function attributeValueLists() {
+        throw new \yii\base\NotSupportedException('attributeValueLists Method should be overidded');
     }
     
     /**
@@ -369,6 +378,19 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         }
         
         return $values;
+    }
+    
+    public function valueList($attribute, $byRecId = false, $layoutName = null ) {
+        if ( !array_key_exists($attribute, $this->attributeValueLists()) ){
+            return [];
+        }
+        if($layoutName === null){
+           $layoutName = static::layoutName(); 
+        }
+        $valueList = $this->attributeValueLists()[$attribute];
+        $layout = static::getDb()->getSchema()->getlayout($layoutName);
+        
+        return array_flip($layout->getValueListTwoFields($valueList, $byRecId ? $this->_recid : null));
     }
 }
 

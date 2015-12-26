@@ -87,6 +87,7 @@ class Schema extends \yii\db\Schema
                 Yii::info($token, __METHOD__);
                 Yii::beginProfile($token, __METHOD__);
                 $this->_layout[$layoutName] = $this->db->getLayout($layoutName);
+                $this->_layout[$layoutName]->loadExtendedInfo();
                 Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
             } catch (airmoi\FileMaker\FileMakerException $e){
                 Yii::endProfile($token, __METHOD__);
@@ -152,6 +153,7 @@ class Schema extends \yii\db\Schema
         
         $column->fmType = $field->type;
         $column->global = $field->isGlobal();
+        $column->valueList = $field->valueList;
         
         /**
          * Dirty hack to prevent field edition on calculated / conatiners fields (will be ignored in generated rules)
@@ -178,7 +180,7 @@ class Schema extends \yii\db\Schema
     {
         $fields = [];
         foreach ( $table->layouts as $layoutName){
-            $fields = ArrayHelper::merge($fields, $this->getLayout($layoutName)->getFields());
+            $fields = ArrayHelper::merge( $this->getLayout($layoutName)->getFields(), $fields);
         }
         
         if ( sizeof( $fields ) == 0)
@@ -203,18 +205,20 @@ class Schema extends \yii\db\Schema
                     $table->relations[$column->relationName] = $tableSchema;
                 }
                 else {
-                    $tableSchema = $table->relations[$column->relationName][1];
+                    $tableSchema = $table->relations[$column->relationName];
                 }
-                $tableSchema->columns[$column->name] = $column;
+                
+                if ( !isset( $tableSchema->columns[$column->name]) ) {
+                    $tableSchema->columns[$column->name] = $column;
+                }
                 //$table->relations[$column->relationName][1][$column->name] = $column;
             }
-            else {
+            elseif ( !isset( $table->columns[$column->name]) ) {
                 $table->columns[$column->name] = $column;
             }
-            /**if ( $column->isPrimaryKey ) {
-                $table->primaryKey[] = $column->name;
-            }*/
         }
+        
+        asort($table->columns);
         return true;
     }
 
