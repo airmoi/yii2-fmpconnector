@@ -31,4 +31,14 @@ class TableSchema extends \yii\db\TableSchema
      * @var array Value lists names
      */
     public $valueLists = [];
+    
+    /**
+     * @var string name of the FileMaker table occurence
+     */
+    public $baseTable;
+    
+    /**
+     * @var array list of layouts based on same tableOccurrence
+     */
+    public $layouts = [];
 }
