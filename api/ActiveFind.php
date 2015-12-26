@@ -235,8 +235,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         }
         
         //Add sort rules
-        foreach($this->orderBy as $fieldName => $precedence){
-            $this->_cmd->addSortRule($fieldName, $precedence);
+        $precedence = 0;
+        foreach($this->orderBy as $fieldName => $order){
+            $this->_cmd->addSortRule($fieldName, ++$precedence, $order);
         }
         
         //Apply limits & offset
@@ -272,7 +273,8 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
                 $this->_count = $this->_result->getFoundSetCount();
                 Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
                 
-            } catch (airmoi\FileMaker\FileMakerException $e){
+            } catch (\Exception $e){
+                Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
                 throw $this->db->getSchema()->convertException($e, $this->serializeQuery());
             }
@@ -639,20 +641,30 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     protected function normalizeOrderBy($columns)
     {
+        $result = [];
         if (is_array($columns)) {
-            return $columns;
-        } else {
-            $columns = preg_split('/\s*,\s*/', trim($columns), -1, PREG_SPLIT_NO_EMPTY);
-            $result = [];
-            foreach ($columns as $column) {
-                if (preg_match('/^(.*?)\s+(asc|desc)$/i', $column, $matches)) {
-                    $result[$matches[1]] = strcasecmp($matches[2], 'desc') ? FileMaker::SORT_ASCENDC : FileMaker::SORT_DESCEND;
+            foreach ( $columns as $column => $order){
+                if( $order == SORT_ASC){
+                    $result[$column] = FileMaker::SORT_ASCEND;
+                } elseif( $order == SORT_DESC){
+                    $result[$column] = FileMaker::SORT_DESCEND;
                 } else {
-                    $result[$column] = FileMaker::SORT_ASCENDC;
+                    $result[$column] = $order;
                 }
             }
-            return $result;
+        } else {
+            $columns = preg_split('/\s*,\s*/', trim($columns), -1, PREG_SPLIT_NO_EMPTY);
+            
+            foreach ($columns as $column) {
+                if (preg_match('/^(.*?)\s+(asc|desc)$/i', $column, $matches)) {
+                    $result[$matches[1]] = strcasecmp($matches[2], 'desc') ? FileMaker::SORT_ASCEND : FileMaker::SORT_DESCEND;
+                } else {
+                    $result[$column] = FileMaker::SORT_ASCEND;
+                }
+            }
         }
+        
+        return $result;
     }
 
     /**

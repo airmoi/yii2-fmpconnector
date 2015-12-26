@@ -93,9 +93,9 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
             $this->query->limit($pagination->getLimit())->offset($pagination->getOffset());
         }
         if (($sort = $this->getSort()) !== false) {
-            foreach($sort->getOrders() as $field => $order){
+            /*foreach($sort->getOrders() as $field => $order){
                 $this->query->orderBy(); //append 'end' to asc/desc
-            }
+            }*/
             $this->query->addOrderBy($sort->getOrders());
         }
 
@@ -163,7 +163,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     public function setSort($value)
     {
         parent::setSort($value);
-        if (($sort = $this->getSort()) !== false && $this->query instanceof ActiveQueryInterface) {
+        if (($sort = $this->getSort()) !== false && $this->query instanceof ActiveFind) {
             /* @var $model Model */
             $model = new $this->query->modelClass;
             if (empty($sort->attributes)) {
