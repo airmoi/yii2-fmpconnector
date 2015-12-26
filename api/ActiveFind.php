@@ -271,7 +271,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
             try {
                 $this->_result = $this->_cmd->execute();
                 $this->_count = $this->_result->getFoundSetCount();
-                Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
+                Yii::info(urldecode($this->db->getLastRequestedUrl()), __METHOD__);
                 
             } catch (\Exception $e){
                 Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
@@ -576,6 +576,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
             $layout = $this->layout;
         }
         $this->_currentRequest = $this->db->newFindRequest($layout);
+        $this->_currentRequest->setOmit(true);
         $this->_requests[] = $this->_currentRequest;
         $this->andWhere($condition);
         return $this;
