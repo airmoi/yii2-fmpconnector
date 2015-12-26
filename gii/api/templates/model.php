@@ -16,6 +16,7 @@ echo "<?php\n";
 
 $relations = $tableSchema->relations;
 $valueLists = $tableSchema->valueLists;
+$layoutList = $tableSchema->layouts;
 ?>
 
 namespace <?= $generator->ns ?>;
@@ -40,13 +41,31 @@ use airmoi\yii2fmconnector\api\FileMakerRelatedRecord;
  */
 class <?= $className ?> extends FileMakerActiveRecord
 {
+    /**
+    * @var string the default layout used to retrieve records
+    */
+    public static $layout = '<?= $generator->generateTableName($tableName) ?>';
+    
     private static $_vList = [
         <?php foreach ($valueLists as $valueList): ?>
          '<?= $valueList ?>',
         <?php endforeach; ?>
     ];
+    
     /**
-     * @inheritdoc
+     * @var array all available FileMaker layouts for this model
+     */
+    public static function listLayouts()
+    {
+        return [
+    <?php foreach ($layoutList as $layoutName): ?>
+        '<?= $layoutName ?>',
+    <?php endforeach; ?>
+        ];
+    }
+    
+    /**
+     * @var string default FileMaker layout used by this model
      */
     public static function layoutName()
     {
