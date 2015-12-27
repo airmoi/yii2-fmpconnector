@@ -50,10 +50,11 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
         }
     }
 } else {
-    foreach ($tableSchema->columns as $column) {
+    foreach ($generator->getColumnNames() as $name) {
+        $column = $tableSchema->getColumn($name);
         $format = $generator->generateColumnFormat($column);
         if (++$count < 6) {
-            if ($column->dbType == 'binary') {
+            if ($column->dbType == 'container') {
                 echo "            [\n"
                    . "              'attribute' => '".$column->name."',\n"
                    . "              'format' => 'image',\n"
@@ -64,7 +65,7 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
                 echo "            '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
             }
         } else {
-            if ($column->dbType == 'binary') {
+            if ($column->dbType == 'container') {
                 echo "           // [\n"
                    . "           //   'attribute' => '".$column->name."',\n"
                    . "           //   'format' => 'image',\n"
