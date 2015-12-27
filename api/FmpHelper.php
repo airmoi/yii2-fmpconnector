@@ -103,6 +103,7 @@ class FmpHelper extends Component {
             $this->_fm->setProperty('locale', $this->locale);
             $this->_fm->setProperty('prevalidate', $this->prevalidate);
             $this->_fm->setProperty('curlOptions', $this->curlOptions);
+            $this->_fm->setProperty('dateFormat', $this->dateFormat);
         }
     }
 
@@ -315,22 +316,6 @@ class FmpHelper extends Component {
         else {
             return 'application/octet-stream';
         }
-    }
-    
-    public function dateConvertInput($value) {
-        if($this->dateFormat === null){
-            return $value;
-        }
-        $date = \DateTime::createFromFormat($this->dateFormat, $value);
-        return $date->format('m/d/Y');
-    }
-    
-    public function dateConvertOutput($value) {
-        if($this->dateFormat === null){
-            return $value;
-        }
-        $date = \DateTime::createFromFormat('m/d/Y', $value);
-        return $date->format($this->dateFormat);
     }
 }
 
