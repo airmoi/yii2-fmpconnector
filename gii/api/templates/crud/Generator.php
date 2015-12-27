@@ -215,12 +215,39 @@ class Generator extends \yii\gii\generators\crud\Generator
      */
     public function getTableSchema()
     {
-        /* @var $class ActiveRecord */
+        /* @var $class \airmoi\yii2fmconnector\api\FileMakerActiveRecord */
         $class = $this->modelClass;
         if (is_subclass_of($class, 'airmoi\yii2fmconnector\api\FileMakerActiveRecord')) {
             return $class::getTableSchema();
         } else {
             return false;
+        }
+    }
+    
+    
+
+    /**
+     * @return array model column names
+     */
+    public function getColumnNames()
+    {
+        /* @var $class \airmoi\yii2fmconnector\api\FileMakerActiveRecord */
+        $class = $this->modelClass;
+        if (is_subclass_of($class, 'airmoi\yii2fmconnector\api\FileMakerActiveRecord')) {
+            $colmunNames = $class::getTableSchema()->getColumnNames();
+            $layoutColumns = $class::getDb()->getSchema()->getLayout($class::layoutName())->getFields();
+            $columns = [];
+            foreach ( $colmunNames as $columnName){
+                if (array_key_exists($columnName, $layoutColumns)){
+                    $columns[] = $columnName;
+                }
+            }
+            return $columns;
+        } else {
+            /* @var $model \yii\base\Model */
+            $model = new $class();
+
+            return $model->attributes();
         }
     }
 }
