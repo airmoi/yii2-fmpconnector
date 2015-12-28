@@ -195,6 +195,9 @@ class Schema extends \yii\db\Schema
         $table->primaryKey[] = '_recid';
         
         foreach ($fields as $field) {
+            if ( $field->name == ''){
+                continue;
+            }
             $column = $this->loadColumnSchema($field);
             
             //handle related Fields outside portals
