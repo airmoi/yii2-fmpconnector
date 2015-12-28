@@ -19,6 +19,8 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     protected $_attributes; 
     
+    public $isPortal;
+    
     /**
      *
      * @var array 
@@ -308,14 +310,16 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         
         foreach ( $records as $record ){
             $model = $modelClass::instantiate([]); 
+            $model->_record = $record;
             \Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName, 'tableOccurence' => $tableSchema->name]);
-            $row = [];
+            
             foreach ( $tableSchema->columns  as $fieldName => $config){
                 $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
             }
+            $row['_recid'] = $record->getRecordId();
 
             parent::populateRecord($model, $row);
-            $model->_recid = $record->getRecordId();
+            //$model->_recid = $record->getRecordId();
             $models[$record->getRecordId()] = $model;
         }
         
@@ -351,11 +355,18 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             return false;
         }
         try {
+           $token = 'update '.__CLASS__ . ' '.$this->getRecId();
+           Yii::beginProfile($token, 'yii\db\Command::query');
            $fm = static::getDb();
            $request = $fm->newEditCommand(static::layoutName(), $this->getRecId(), $values);
            $request->execute();
+           
+            Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
+            Yii::endProfile($token, 'yii\db\Command::query');
            return 1;
         } catch (\Exception $e) {
+            Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
+            Yii::endProfile($token, 'yii\db\Command::query');
             throw new \yii\db\Exception($e->getMessage() . '(' . $e->getCode() . ')', $e->getCode());
         }
     }
@@ -385,12 +396,17 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             return [];
         }
         if($layoutName === null){
-           $layoutName = static::layoutName(); 
+            if($this->isPortal) {
+                $layoutName = $this->parentLayoutName(); 
+            } else {
+                $layoutName = $this->layoutName();
+            }
         }
         $valueList = $this->attributeValueLists()[$attribute];
         $layout = static::getDb()->getSchema()->getlayout($layoutName);
+        $recid = $this->isPortal ? $this->getParent()->getRecid() : $this->getRecId();
         
-        return array_flip($layout->getValueListTwoFields($valueList, $byRecId ? $this->_recid : null));
+        return array_flip($layout->getValueListTwoFields($valueList, $byRecId ? $recid : null));
     }
 }
 
@@ -424,6 +440,14 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
         return $this->getParent()->layoutName();
     }
     
+    
+    /**
+     * @return string default FileMaker layout used by this model
+     */
+    public static function layoutName() {
+        throw new \yii\base\NotSupportedException('layoutName Method should be overidded');
+    }
+    
     /**
      * Returns the list of all attribute names of the model.
      * The default implementation will return all column names of the table associated with this AR class.
@@ -446,10 +470,31 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
     
     public function update($runValidation = true, $attributeNames = null)
     {
-        if(!$this->isPortal()){
+        if ($runValidation && !$this->validate($attributeNames)) {
+            return false;
+        }
+        
+        if(!$this->isPortal){
             return $this->getParent()->update($runValidation, $attributeNames);
         } else {
-            throw new \yii\base\NotSupportedException('You cannot edit a related records in portal views');
+            $values = $this->getDirtyAttributes();
+            foreach ( $values as $field => $value ){
+                $this->_record->setField($field, $value);
+            }
+            
+           $token = 'update '.__CLASS__ . ' '.$this->getRecId();
+           Yii::beginProfile($token, 'yii\db\Command::query');
+           try {
+                $this->_record->commit();
+                Yii::info($this->getParent()->getDb()->getLastRequestedUrl(), __METHOD__);
+                Yii::endProfile($token, 'yii\db\Command::query');
+                return 1;
+           }
+           catch ( \Exception $e) {
+                Yii::info($this->getParent()->getDb()->getLastRequestedUrl(), __METHOD__);
+                Yii::endProfile($token, 'yii\db\Command::query');
+                return false;
+            }
         }
     }
     

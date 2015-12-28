@@ -10,6 +10,7 @@ namespace airmoi\yii2fmconnector\gii\api\crud;
 
 use yii\helpers\Inflector;
 use airmoi\yii2fmconnector\api\Schema;
+use yii\gii\CodeFile;
 /**
  * Generates CRUD
  *
@@ -25,6 +26,30 @@ use airmoi\yii2fmconnector\api\Schema;
  */
 class Generator extends \yii\gii\generators\crud\Generator
 {
+    /**
+     * @inheritdoc
+     */
+    public function generate()
+    {
+        $files = parent::generate();
+
+        $viewPath = $this->getViewPath().'/portals';
+        $templatePath = $this->getTemplatePath() . '/views/portals';
+        foreach ( $this->getTableSchema()->relations as $name => $tableSchema ) {
+            if($tableSchema->isPortal){
+                foreach (scandir($templatePath) as $file) {
+                    if (is_file($templatePath . '/' . $file) && pathinfo($file, PATHINFO_EXTENSION) === 'php') {
+                        $filename = '_' . $name . $file;
+                        $modelClass = (new \ReflectionClass($this->modelClass))->getNamespaceName().'\\'.ucfirst($name);
+                        $files[] = new CodeFile("$viewPath/$filename", $this->render("views/portals/$file", ['modelClass' => $modelClass, 'tableSchema' => $tableSchema]));
+                    }
+                }
+            }
+        }
+
+        return $files;
+    }
+    
     /**
      * Generates code for active field
      * @param string $attribute
@@ -51,7 +76,7 @@ class Generator extends \yii\gii\generators\crud\Generator
         }
         $column = $tableSchema->columns[$attribute];
         if ($column->valueList !== null) {
-            return "\$form->field(\$model, '$attribute')->dropDownList(\$model->valueList('$attribute'))";
+            return "\$form->field(\$model, '$attribute')->dropDownList(\$model->valueList('$attribute'), ['prompt' => 'Select a value' ])";
         } else {
             if (preg_match('/^(password|pass|passwd|passcode)$/i', $column->name)) {
                 $input = 'passwordInput';

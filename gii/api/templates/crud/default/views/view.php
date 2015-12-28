@@ -128,6 +128,15 @@ GridView::widget([
                 }
             }
         ?>
+            [
+                'class' => 'yii\grid\ActionColumn', 
+                'template' => '{update}',
+                'buttons' => [
+                    'update' => function ($url, airmoi\yii2fmconnector\api\FileMakerRelatedRecord $model, $key) use ($parentId) {
+                        return Html::a('<span class="glyphicon glyphicon-pencil"></span>', ['updaterelated', 'relation' => $model->relationName,'id' => $parentId, 'relatedId' => $model->_recid]);
+                    },
+                ],
+            ],
         ],
     ]
 ); ?>
