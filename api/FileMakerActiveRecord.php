@@ -303,7 +303,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         $tableSchema = static::getDb()->getSchema()->getTableSchema(static::layoutName())->relations[$relationName];
         $model = $modelClass::instantiate([]); 
         
-        if($record === null){
+        if($record === null && $this->_record !== null){
             $record = $this->_record->newRelatedRecord($tableSchema->name);
         }
         $model->_record = $record;

@@ -11,7 +11,7 @@ use yii\helpers\StringHelper;
 
 $parentModel = new $generator->modelClass();
 /* @var $model \airmoi\yii2fmconnector\api\FileMakerRelatedRecord */
-$model = new $modelClass();
+$model = $parentModel->newRelatedRecord($tableSchema->fullName);
 $safeAttributes = $model->safeAttributes();
 if (empty($safeAttributes)) {
     $safeAttributes = $model->attributes();
