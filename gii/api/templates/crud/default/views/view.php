@@ -85,7 +85,10 @@ if($tableSchema !== false){
     foreach ($tableSchema->relations as $relatedTableSchema){
         if($relatedTableSchema->isPortal) {
             ?>
-<h1><?= Html::encode($relatedTableSchema->name) ?></h1>
+    <h1><?= Html::encode($relatedTableSchema->name) ?></h1>
+    <p>
+        <?= '<?=' ?>Html::a(Yii::t('app', 'Create <?= Html::encode($relatedTableSchema->name) ?>'), ['createrelated', 'id' => $model->getRecId(), 'relation' => '<?= $relatedTableSchema->fullName ?>'], ['class' => 'btn btn-success']) ?>
+    </p>
 <?=  '<?='  ?>  
 GridView::widget([
     'dataProvider' => new ArrayDataProvider([

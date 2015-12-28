@@ -295,6 +295,26 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     /**
      * 
      * @param string $relationName
+     * @param \airmoi\FileMaker\Object\Record $record
+     */
+    public function newRelatedRecord( $relationName, $record = null ) {
+        
+        $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
+        $tableSchema = static::getDb()->getSchema()->getTableSchema(static::layoutName())->relations[$relationName];
+        $model = $modelClass::instantiate([]); 
+        
+        if($record === null){
+            $record = $this->_record->newRelatedRecord($tableSchema->name);
+        }
+        $model->_record = $record;
+        \Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName, 'tableOccurence' => $tableSchema->name]);
+        
+        return $model;
+    }
+    
+    /**
+     * 
+     * @param string $relationName
      * @param ColumnSchema[] $fields
      * @param \airmoi\FileMaker\Object\Record $record
      */
@@ -309,10 +329,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         $models = [];
         
         foreach ( $records as $record ){
-            $model = $modelClass::instantiate([]); 
-            $model->_record = $record;
-            \Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName, 'tableOccurence' => $tableSchema->name]);
-            
+            $model = $this->newRelatedRecord($relationName, $record);
             foreach ( $tableSchema->columns  as $fieldName => $config){
                 $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
             }
@@ -466,6 +483,34 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
      */
     public function getParent() {
         return $this->parent;
+    }
+    public function insert($runValidation = true, $attributes = null) { 
+        if ($runValidation && !$this->validate($attributes)) {
+            return false;
+        }
+        
+        if(!$this->isPortal){
+            return $this->getParent()->insert($runValidation, $attributeNames);
+        }  else {
+            $values = $this->getDirtyAttributes();
+            foreach ( $values as $field => $value ){
+                $this->_record->setField($field, $value);
+            }
+            
+           $token = 'insert '.__CLASS__ . ' '.$this->getRecId();
+           Yii::beginProfile($token, 'yii\db\Command::query');
+           try {
+                $this->_record->commit();
+                Yii::info($this->getParent()->getDb()->getLastRequestedUrl(), __METHOD__);
+                Yii::endProfile($token, 'yii\db\Command::query');
+                return 1;
+           }
+           catch ( \Exception $e) {
+                Yii::info($this->getParent()->getDb()->getLastRequestedUrl(), __METHOD__);
+                Yii::endProfile($token, 'yii\db\Command::query');
+                return false;
+            }
+        }
     }
     
     public function update($runValidation = true, $attributeNames = null)

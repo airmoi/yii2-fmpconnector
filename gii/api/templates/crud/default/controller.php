@@ -113,6 +113,27 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
     }
 
     /**
+     * Creates a new Sample model.
+     * If creation is successful, the browser will be redirected to the 'view' page.
+     * @return mixed
+     */
+    public function actionCreaterelated($id, $relation)
+    {
+        $model = $this->findModel($id);
+        $relationClass = ucfirst($relation);
+        $relatedRecord = $model->newRelatedRecord($relation);
+        
+        if ($relatedRecord->load(Yii::$app->request->post()) && $relatedRecord->save()) {
+            return $this->redirect(['view', 'id' => $model->_recid]);
+        } else {
+            $view = '_' . $relation . '_form';
+            return $this->render('portals/' . $view, [
+                'model' => $relatedRecord,
+            ]);
+        }
+    }
+
+    /**
      * Updates an existing <?= $modelClass ?> model.
      * If update is successful, the browser will be redirected to the 'view' page.
      * <?= implode("\n     * ", $actionParamComments) . "\n" ?>
