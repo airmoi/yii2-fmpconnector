@@ -85,7 +85,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     public $resultLayout;
     
-    public $relatedSetFilter = 'layout';
+    public $relatedSetFilter = 'none';
     public $relatedSetMax = null;
     
     /**
