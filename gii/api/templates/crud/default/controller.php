@@ -201,18 +201,19 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
      * @param string $field The fieldName to retrieve as container
      * @return mixed
      */
-    public function actionContainer($id, $field)
+    public function actionContainer($token)
     {
-        $model = $this->findModel($id);
+        /*$model = $this->findModel($id);
         
         if ( $pos = strpos($field, '::') ){
             list ( $relation, $field, $recid) = explode ( "::", $field );
             $url = $model->$relation[$recid]->$field;
         } else {
             $url = $model->$field;
-        }
+        }*/
+        $url = <?= $modelClass ?>::decryptContainerUrl($token);
         
-        $fileName = $model->getContainerFileName($field);
+        $fileName = <?= $modelClass ?>::getContainerFileName($url);
 
         \Yii::$app->response->format = \yii\web\Response::FORMAT_RAW;
         
@@ -221,7 +222,7 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
         }
         
         header('Content-Type: '.\airmoi\yii2fmconnector\api\FmpHelper::mime_content_type($fileName));
-        return $model->getDb()->getContainerData($url);
+        return <?= $modelClass ?>::getDb()->getContainerData($url);
         Yii::$app->end();
     }
 

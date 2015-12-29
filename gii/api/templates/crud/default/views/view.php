@@ -53,7 +53,7 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
             echo "            [\n"
                . "              'attribute' => '".$column->name."',\n"
                . "              'format' => 'image',\n"
-               . "              'value' => yii\helpers\Url::to(['container', 'id' => \$model->".$tableSchema->primaryKey[0].", 'field' => '".$column->name."']),\n"
+               . "              'value' => yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->".$column->name.")]),\n"
                ."            ],\n";
         }
         else {
@@ -109,7 +109,7 @@ GridView::widget([
                         echo "            [\n"
                            . "              'attribute' => '".$column->name."',\n"
                            . "              'format' => 'image',\n"
-                           . "              'value' => function(\$model) use (\$parentId) { return yii\helpers\Url::to(['container', 'id' => \$parentId, 'field' => '".$relatedTableSchema->fullName . "::" . $column->name."::'.\$model->".$tableSchema->primaryKey[0]."]);},\n"
+                           . "              'value' => function(\$model) use (\$parentId) { return yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->".$column->name.")]);},\n"
                            ."            ],\n";
                     }
                     else {
@@ -121,7 +121,7 @@ GridView::widget([
                         echo "            //[\n"
                            . "            //    'attribute' => '".$column->name."',\n"
                            . "            //    'format' => 'image',\n"
-                           . "            //    'value' => function(\$model) use (\$parentId) { return yii\helpers\Url::to(['container', 'id' => \$parentId, 'field' => '".$relatedTableSchema->fullName . "::" . $column->name."::'.\$model->".$tableSchema->primaryKey[0]."]);},\n"
+                           . "            //    'value' => function(\$model) use (\$parentId) { return yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->".$column->name.")]);},\n"
                            . "            //],\n";
                     }
                     else {

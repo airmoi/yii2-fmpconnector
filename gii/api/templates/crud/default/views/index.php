@@ -58,7 +58,7 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
                 echo "            [\n"
                    . "              'attribute' => '".$column->name."',\n"
                    . "              'format' => 'image',\n"
-                   . "              'value' => function(\$model){ return yii\helpers\Url::to(['container', 'id' => \$model->".$tableSchema->primaryKey[0].", 'field' => '".$column->name."']);},\n"
+                   . "              'value' => function(\$model){ return yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->".$column->name.")]);},\n"
                    ."            ],\n";
             }
             else {
@@ -69,7 +69,7 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
                 echo "           // [\n"
                    . "           //   'attribute' => '".$column->name."',\n"
                    . "           //   'format' => 'image',\n"
-                   . "           //   'value' => function(\$model){ return yii\helpers\Url::to(['container', 'id' => \$model->".$tableSchema->primaryKey[0].", 'field' => '".$column->name."']);},\n"
+                   . "           //   'value' => function(\$model){ return yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->".$column->name.")]);},\n"
                    ."            // ],\n";
             }
             else {

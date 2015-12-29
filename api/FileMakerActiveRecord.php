@@ -148,12 +148,11 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     
     /**
      * get filename of a container attribute
-     * @param string $attribute the container attribute name
+     * @param string $url the container url
      * @return string the filename
      */
-    public function getContainerFileName($attribute) {
-        $uri = $this->$attribute;
-        $name = basename($uri);
+    public static function getContainerFileName($url) {
+        $name = basename($url);
         return substr($name, 0, strpos($name, "?"));
     }
     
@@ -436,6 +435,18 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         $recid = $this->isPortal ? $this->getParent()->getRecid() : $this->getRecId();
         
         return array_flip($layout->getValueListTwoFields($valueList, $byRecId ? $recid : null));
+    }
+    
+    
+    
+    public static function encryptContainerUrl($url) {
+        $user = Yii::$app->user;
+        $request = Yii::$app->request;
+        return base64_encode(Yii::$app->security->encryptByKey($url, get_called_class()));
+    }
+    
+    public static function decryptContainerUrl($encryptedUrl) {
+        return Yii::$app->security->decryptByKey(base64_decode($encryptedUrl), get_called_class());
     }
 }
 
