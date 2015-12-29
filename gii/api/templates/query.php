@@ -29,7 +29,7 @@ namespace <?= $generator->queryNs ?>;
  *
  * @see <?= $modelFullClassName . "\n" ?>
  */
-class <?= $className ?> extends airmoi\yii2fmconnector\api\ActiveFind
+class <?= $className ?> extends \airmoi\yii2fmconnector\api\ActiveFind
 {
     /*public function active()
     {

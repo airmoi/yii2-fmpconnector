@@ -138,6 +138,24 @@ class <?= $className ?> extends FileMakerActiveRecord
         //TODO retrievex related records ?
     }
 <?php endforeach; ?>
+<?php if ($queryClassName): ?>
+<?php
+    $queryClassFullName = ($generator->ns === $generator->queryNs) ? $queryClassName : '\\' . $generator->queryNs . '\\' . $queryClassName;
+    echo "\n";
+?>
+    /**
+     * @inheritdoc
+     * @return <?= $queryClassFullName ?> the active query used by this AR class.
+     */
+    public static function find($layout = null)
+    {
+        $query = new <?= $queryClassFullName ?>(get_called_class());
+        if ($layout !== null){
+            $query->resultLayout = $layout;
+        }
+        return $query;
+    }
+<?php endif; ?>
 }
 
 <?php if (!empty($relations)): ?>
