@@ -32,12 +32,10 @@ use airmoi\yii2fmconnector\api\FileMakerRelatedRecord;
 <?php foreach ($tableSchema->columns as $column): ?>
  * @property <?= "{$column->phpType} \${$column->name}\n" ?>
 <?php endforeach; ?>
-<?php if (!empty($relations)): ?>
  *
 <?php foreach ($relations as $name => $relation): ?>
  * @property <?= ucfirst($name) .($relation->isPortal ? '[]' : '' ) . ' $' . lcfirst($name) . "\n" ?>
 <?php endforeach; ?>
-<?php endif; ?>
  */
 class <?= $className ?> extends FileMakerActiveRecord
 {
@@ -158,64 +156,7 @@ class <?= $className ?> extends FileMakerActiveRecord
 <?php endif; ?>
 }
 
-<?php if (!empty($relations)): ?>
 <?php foreach ($relations as $name => $relation): ?>
-<?php $rules = $generator->generateRules($relation) ?>
-/*
- * This is the model class for related records "<?= $generator->generateTableName($name) ?>".
-<?php foreach ($relation->columns as $column): ?>
- * @property <?= "{$column->phpType} \${$column->name}\n" ?>
+<?= $generator->render('_related_model.php', ['generator' => $generator, 'relationName' => $name, 'tableSchema' => $relation]) ?>
 <?php endforeach; ?>
- */
- class <?= ucfirst($name) ?> extends FileMakerRelatedRecord
-{
-    /**
-     * @var string name of the default layout the relation is accessible from
-     */
-    public static $defaultLayout = '<?=  $relation->defaultLayout ?>';
-<?php if ($generator->db !== 'db'): ?>
-
-    /**
-     * @return \yii\db\Connection the database connection used by this AR class.
-     */
-    public static function getDb()
-    {
-        return Yii::$app->get('<?= $generator->db ?>');
-    }
-<?php endif; ?>
-    
-    /**
-     * @var array all available FileMaker layouts for this model
-     */
-    public function attributeValueLists()
-    {
-        return [
-<?php foreach ($relation->columns as $column): 
-        if ($column->valueList !== null): ?>
-            '<?= $column->name ?>' => '<?= $column->valueList ?>',
-<?php   endif;   
-    endforeach; ?>
-        ];
-    }
-    /**
-     * @inheritdoc
-     */
-    public function rules()
-    {
-        return [<?= "\n            " . implode(",\n            ", $rules) . "\n        " ?>];
-    }
-    /**
-     * @inheritdoc
-     */
-    public function attributeLabels()
-    {
-        return [
-<?php foreach ($relation->columns as $column): ?>
-            <?= "'$column->name' => " . $generator->generateString($name . ' ' . $column->name) . ",\n" ?>
-<?php endforeach; ?>
-        ];
-    }
-}
-<?php endforeach; ?>
-<?php endif; ?>
 

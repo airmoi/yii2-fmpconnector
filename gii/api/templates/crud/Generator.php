@@ -99,6 +99,38 @@ class Generator extends \yii\gii\generators\crud\Generator
         }
     }
     
+    public function generateGridViewColumn($column, $isComment = false, $relationName = null){
+        $commentString = $isComment ? '//' : '' ;
+        $attributeName = ($relationName !== null ? $relationName . '.' : '' ) . $column->name;
+        if ($column->dbType == 'container') {
+            return "            $commentString [\n"
+               . "              $commentString'attribute' => '".$attributeName."',\n"
+               . "              $commentString'format' => 'image',\n"
+               . "              $commentString'value' => function(\$model) { return yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->getAttribute('".$attributeName."'))]);},\n"
+               ."            $commentString ],\n";
+        }
+        else {
+            $format = $this->generateColumnFormat($column);
+            return "            $commentString'" . $attributeName . ($format === 'text' ? "" : ":" . $format) . "',\n";
+        }
+    }
+    
+    public function generateListViewColumn($column, $isComment = false, $relationName = null){
+        $commentString = $isComment ? '//' : '' ;
+        $attributeName = ($relationName !== null ? $relationName . '.' : '' ) . $column->name;
+        if ($column->dbType == 'container') {
+            echo "           $commentString [\n"
+               . "              $commentString 'attribute' => '".$attributeName."',\n"
+               . "              $commentString 'format' => 'image',\n"
+               . "              $commentString 'value' => yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->getAttribute('".$attributeName."'))]),\n"
+               ."            $commentString ],\n";
+        }
+        else {
+            $format = $this->generateColumnFormat($column);
+            echo "            $commentString '" . $attributeName . ($format === 'text' ? "" : ":" . $format) . "',\n";
+        }
+    }
+    
     /**
      * Generates code namespaces potentially used in views (related models)
      * @return string

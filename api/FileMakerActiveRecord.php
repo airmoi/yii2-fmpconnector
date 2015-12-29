@@ -262,14 +262,16 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     public static function populateRecordFromFm(FileMakerActiveRecord $record, \airmoi\FileMaker\Object\Record $fmRecord){
         $record->_record = $fmRecord;
         $row = [];
+        $attributePrefix = $record->isPortal ? $record->tableOccurence . '::' : '';
         foreach ($record->attributes() as $attribute){
-            $row[$attribute] = $fmRecord->getField($attribute);
+            $row[$attribute] = $fmRecord->getField($attributePrefix.$attribute);
         }
         $row['_recid'] = $fmRecord->getRecordId();
         parent::populateRecord($record, $row);
         
+        $tableSchema = $record->isPortal ? static::getDb()->getTableSchema(static::layoutName())->relations[$record->relationName] : static::getDb()->getTableSchema(static::layoutName());
         //Populate relations
-        foreach ( static::getDb()->getSchema()->getTableSchema(static::layoutName())->relations as $relationName => $tableSchema){
+        foreach ( $tableSchema->relations as $relationName => $tableSchema){
             if( !$tableSchema->isPortal ){
                 $record->populateHasOneRelation($relationName, $tableSchema, $fmRecord);
             }
@@ -309,7 +311,6 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      * @param \airmoi\FileMaker\Object\Record $record
      */
     public function newRelatedRecord( $relationName, $record = null ) {
-        
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
         $tableSchema = static::getDb()->getTableSchema(static::layoutName())->relations[$relationName];
         $model = $modelClass::instantiate([]); 
@@ -318,7 +319,11 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             $record = $this->_record->newRelatedRecord($tableSchema->name);
         }
         $model->_record = $record;
-        \Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName, 'tableOccurence' => $tableSchema->name]);
+        $model->isPortal = true;
+        $model->parent = $this;
+        $model->relationName = $relationName;
+        $model->tableOccurence = $tableSchema->name;
+        //\Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName, '' => ]);
         
         return $model;
     }
@@ -341,12 +346,13 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         
         foreach ( $records as $record ){
             $model = $this->newRelatedRecord($relationName, $record);
-            foreach ( $tableSchema->columns  as $fieldName => $config){
+            self::populateRecordFromFm($model, $record);
+            /*foreach ( $tableSchema->columns  as $fieldName => $config){
                 $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
             }
             $row['_recid'] = $record->getRecordId();
 
-            parent::populateRecord($model, $row);
+            parent::populateRecord($model, $row);*/
             //$model->_recid = $record->getRecordId();
             $models[$record->getRecordId()] = $model;
         }
@@ -480,6 +486,15 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
         return $this->getParent()->layoutName();
     }
     
+    public function getTableSchemaFromParent($layout = null) {
+        if($this->getParent()->isPortal){
+            return $this->getParent()->getTableSchemaFromParent($layout)->relations[$this->relationName];
+        }
+        else {
+            return $this->getParent()->getTableSchema($layout)->relations[$this->relationName];
+        }
+    }
+    
     /**
      * Returns the list of all attribute names of the model.
      * The default implementation will return all column names of the table associated with this AR class.
@@ -487,7 +502,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
      */
     public function attributes()
     {
-        $relationSchema = $this->getDb()->getTableSchema($this->layoutName())->relations[$this->relationName];
+        $relationSchema = $this->getTableSchemaFromParent();
         $keys = array_keys($relationSchema->columns);
         return $keys;
     }
@@ -499,6 +514,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
     public function getParent() {
         return $this->parent;
     }
+    
     public function insert($runValidation = true, $attributes = null) { 
         if ($runValidation && !$this->validate($attributes)) {
             return false;

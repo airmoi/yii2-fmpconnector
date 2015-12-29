@@ -120,7 +120,7 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
     public function actionCreaterelated($id, $relation)
     {
         //Load Main model class to resolve namespace
-        Sample::layoutName();
+        <?= $modelClass ?>::layoutName();
         $relationClass = '\\app\\models\\'.ucfirst($relation);
         $layout = $relationClass::layoutName();
         
@@ -165,12 +165,13 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
     public function actionUpdaterelated($id, $relation, $relatedId)
     {
         //Load Main model class to resolve namespace
-        Sample::layoutName();
+        <?= $modelClass ?>::layoutName();
         $relationClass = '\\app\\models\\'.ucfirst($relation);
         $layout = $relationClass::layoutName();
         
         $model = $this->findModel($id, $layout);
-        $relatedRecord = $model->$relation[$relatedId];
+        $relatedRecords = $model->$relation;
+        $relatedRecord = $relatedRecords[$relatedId];
         
         if ($relatedRecord->load(Yii::$app->request->post()) && $relatedRecord->save()) {
             return $this->redirect(['view', 'id' => $model->_recid]);
