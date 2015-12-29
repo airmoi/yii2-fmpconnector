@@ -33,9 +33,11 @@ use yii\widgets\ActiveForm;
 
     <?= "<?php " ?>$form = ActiveForm::begin(); ?>
 
+    <?= "<?= " ?>$form->errorSummary($model) ?>
+
 <?php foreach ($tableSchema->columns as $column) {
     if (in_array($column->name, $safeAttributes)) {
-        echo "    <?= " . $generator->generateActiveField($column->name) . " ?>\n\n";
+        echo "    <?= " . $generator->generateActiveField($column->name, $tableSchema) . " ?>\n\n";
     }
 } ?>
     <div class="form-group">

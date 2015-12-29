@@ -55,9 +55,9 @@ class Generator extends \yii\gii\generators\crud\Generator
      * @param string $attribute
      * @return string
      */
-    public function generateActiveField($attribute)
+    public function generateActiveField($attribute, $tableShema = null)
     {
-        $tableSchema = $this->getTableSchema();
+        $tableSchema = $tableShema === null ? $this->getTableSchema() : $tableShema;
         if($pos = strpos($attribute, '.')){
             $relationName = substr($attribute , 0 , $pos);
             $attribute = substr($attribute, $pos+1);
@@ -75,7 +75,7 @@ class Generator extends \yii\gii\generators\crud\Generator
             }
         }
         $column = $tableSchema->columns[$attribute];
-        if ($column->valueList !== null) {
+        if ($column->valueList) {
             return "\$form->field(\$model, '$attribute')->dropDownList(\$model->valueList('$attribute'), ['prompt' => 'Select a value' ])";
         } else {
             if (preg_match('/^(password|pass|passwd|passcode)$/i', $column->name)) {

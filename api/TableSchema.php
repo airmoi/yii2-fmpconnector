@@ -20,9 +20,15 @@ class TableSchema extends \yii\db\TableSchema
      * @var bool 
      */
     public $isPortal = false;
+    
+    /**
+     *
+     * @var string
+     */
+    public $defaultLayout;
     /**
      * 
-     * @var TableSchema[] Array of ColumnSchema indexed by relation name (OT)
+     * @var TableSchema[] Array of TableSchema indexed by relation name (OT)
      */
     public $relations = [];
 
@@ -39,6 +45,7 @@ class TableSchema extends \yii\db\TableSchema
     
     /**
      * @var array list of layouts based on same tableOccurrence
+     * or where the related table is accessible from
      */
     public $layouts = [];
 }

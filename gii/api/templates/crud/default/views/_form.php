@@ -29,7 +29,7 @@ use yii\widgets\ActiveForm;
 
     <?= "<?php " ?>$form = ActiveForm::begin(); ?>
 
-    <?= "<?php " ?>$form->errorSummary($model) ?>
+    <?= "<?= " ?>$form->errorSummary($model) ?>
     
 <?php foreach ($generator->getColumnNames() as $attribute) {
     if (in_array($attribute, $safeAttributes)) {

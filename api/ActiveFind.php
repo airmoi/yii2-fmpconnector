@@ -343,7 +343,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
                 $models[$key] = $row;
             }
         } else {
-            /* @var $class FileMakerActiveRecord */
+            /* @var $model FileMakerActiveRecord */
             $class = $this->modelClass;
             if ($this->indexBy === null) {
                 foreach ($records as $record) {

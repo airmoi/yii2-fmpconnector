@@ -14,6 +14,11 @@ use yii\helpers\ArrayHelper;
 class FileMakerActiveRecord extends \yii\db\BaseActiveRecord 
 {
     /**
+    * @var string the default layout used to retrieve records
+    */
+    public static $defaultLayout;
+    
+    /**
      *
      * @var array 
      */
@@ -65,25 +70,29 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     public function attributes()
     {
-        return array_keys($this->getDb()->getSchema()->getTableSchema($this->layoutName())->columns);
+        return array_keys($this->getDb()->getTableSchema($this->layoutName())->columns);
     }
     
     /**
      * @inheritdoc
      * @return ActiveFind the newly created [[ActiveFind]] instance.
      */
-    public static function find()
+    public static function find($layout = null)
     {
-        return Yii::createObject(ActiveFind::className(), [get_called_class()]);
+        $query = Yii::createObject(ActiveFind::className(), [get_called_class()]);
+        if ($layout !== null){
+            $query->resultLayout = $layout;
+        }
+        return $query;
     }
     
     /**
      * @inheritdoc
      * @return static[]
      */
-    public static function findAll($condition = [], callable $callback = null)
+    public static function findAll($condition = [], callable $callback = null, $layout = null)
     {
-        $query = static::find();
+        $query = static::find($layout);
         $query->andWhere($condition);
         return $query->all();
     }
@@ -103,19 +112,22 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      * @return static ActiveRecord instance matching the condition, or null if nothing matches.
      * @throws \yii\web\HttpException
      */
-    public static function findOne($condition){
+    public static function findOne($condition, $layout = null){
         if(!ArrayHelper::isAssociative($condition)) {
-            return self::find()->getRecordById($condition);
+            return self::find($layout)->getRecordById($condition);
         }
 
-        return self::find()->andWhere($condition)->one();
+        return self::find($layout)->andWhere($condition)->one();
     }
     
     /**
      * @return string default FileMaker layout used by this model
      */
     public static function layoutName() {
-        throw new \yii\base\NotSupportedException('layoutName Method should be overidded');
+        if(static::$defaultLayout === null) {
+            throw new \yii\base\NotSupportedException('defaultLayout property must be set in model');
+        }
+        return static::$defaultLayout;
     }
     
     /**
@@ -146,8 +158,8 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     }
     
     /**
-     * Return the layout name use by this model
-     * @return string
+     * Return the layout Object used by this model
+     * @return Layout
      */
     public static function getLayout() {
         if(!isset(static::$_layout[static::layoutName()])) {
@@ -164,7 +176,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     public static function getTableSchema()
     {
-        $schema = static::getDb()->getSchema()->getTableSchema(static::layoutName());
+        $schema = static::getDb()->getTableSchema(static::layoutName());
         if ($schema !== null) {
             return $schema;
         } else {
@@ -300,7 +312,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     public function newRelatedRecord( $relationName, $record = null ) {
         
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
-        $tableSchema = static::getDb()->getSchema()->getTableSchema(static::layoutName())->relations[$relationName];
+        $tableSchema = static::getDb()->getTableSchema(static::layoutName())->relations[$relationName];
         $model = $modelClass::instantiate([]); 
         
         if($record === null && $this->_record !== null){
@@ -442,7 +454,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
     public $parent;
     
     /**
-     * Name of the relation)
+     * Name of the relation
      * @var string
      */
     public $relationName;
@@ -457,14 +469,6 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
         return $this->getParent()->layoutName();
     }
     
-    
-    /**
-     * @return string default FileMaker layout used by this model
-     */
-    public static function layoutName() {
-        throw new \yii\base\NotSupportedException('layoutName Method should be overidded');
-    }
-    
     /**
      * Returns the list of all attribute names of the model.
      * The default implementation will return all column names of the table associated with this AR class.
@@ -472,7 +476,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
      */
     public function attributes()
     {
-        $relationSchema = $this->getParent()->getDb()->getSchema()->getTableSchema($this->parentLayoutName())->relations[$this->relationName];
+        $relationSchema = $this->getDb()->getTableSchema($this->layoutName())->relations[$this->relationName];
         $keys = array_keys($relationSchema->columns);
         return $keys;
     }
@@ -506,6 +510,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
                 return 1;
            }
            catch ( \Exception $e) {
+                $this->addError('general', $e->getMessage());
                 Yii::info($this->getParent()->getDb()->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($token, 'yii\db\Command::query');
                 return false;
@@ -531,12 +536,13 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
            Yii::beginProfile($token, 'yii\db\Command::query');
            try {
                 $this->_record->commit();
-                Yii::info($this->getParent()->getDb()->getLastRequestedUrl(), __METHOD__);
+                Yii::info($this->getDb()->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($token, 'yii\db\Command::query');
                 return 1;
            }
            catch ( \Exception $e) {
-                Yii::info($this->getParent()->getDb()->getLastRequestedUrl(), __METHOD__);
+                $this->addError('general', $e->getMessage());
+                Yii::info($this->getDb()->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($token, 'yii\db\Command::query');
                 return false;
             }

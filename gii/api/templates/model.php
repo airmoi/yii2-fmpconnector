@@ -44,7 +44,7 @@ class <?= $className ?> extends FileMakerActiveRecord
     /**
     * @var string the default layout used to retrieve records
     */
-    public static $defaultLayoutName = '<?= $generator->generateTableName($tableName) ?>';
+    public static $defaultLayout = '<?= $generator->generateTableName($tableName) ?>';
     
     /**
     * @var string the default layout to use for find requests
@@ -88,7 +88,7 @@ class <?= $className ?> extends FileMakerActiveRecord
      */
     public static function layoutName()
     {
-        return self::$defaultLayoutName;
+        return self::$defaultLayout;
     }
     
     /**
@@ -151,6 +151,34 @@ class <?= $className ?> extends FileMakerActiveRecord
  */
  class <?= ucfirst($name) ?> extends FileMakerRelatedRecord
 {
+    /**
+     * @var string name of the default layout the relation is accessible from
+     */
+    public static $defaultLayout = '<?=  $relation->defaultLayout ?>';
+<?php if ($generator->db !== 'db'): ?>
+
+    /**
+     * @return \yii\db\Connection the database connection used by this AR class.
+     */
+    public static function getDb()
+    {
+        return Yii::$app->get('<?= $generator->db ?>');
+    }
+<?php endif; ?>
+    
+    /**
+     * @var array all available FileMaker layouts for this model
+     */
+    public function attributeValueLists()
+    {
+        return [
+<?php foreach ($relation->columns as $column): 
+        if ($column->valueList !== null): ?>
+            '<?= $column->name ?>' => '<?= $column->valueList ?>',
+<?php   endif;   
+    endforeach; ?>
+        ];
+    }
     /**
      * @inheritdoc
      */

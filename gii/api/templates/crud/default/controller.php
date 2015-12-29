@@ -119,8 +119,12 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
      */
     public function actionCreaterelated($id, $relation)
     {
-        $model = $this->findModel($id);
-        $relationClass = ucfirst($relation);
+        //Load Main model class to resolve namespace
+        Sample::layoutName();
+        $relationClass = '\\app\\models\\'.ucfirst($relation);
+        $layout = $relationClass::layoutName();
+        
+        $model = $this->findModel($id, $layout);
         $relatedRecord = $model->newRelatedRecord($relation);
         
         if ($relatedRecord->load(Yii::$app->request->post()) && $relatedRecord->save()) {
@@ -160,7 +164,12 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
      */
     public function actionUpdaterelated($id, $relation, $relatedId)
     {
-        $model = $this->findModel($id);
+        //Load Main model class to resolve namespace
+        Sample::layoutName();
+        $relationClass = '\\app\\models\\'.ucfirst($relation);
+        $layout = $relationClass::layoutName();
+        
+        $model = $this->findModel($id, $layout);
         $relatedRecord = $model->$relation[$relatedId];
         
         if ($relatedRecord->load(Yii::$app->request->post()) && $relatedRecord->save()) {
@@ -223,7 +232,7 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
      * @return <?=                   $modelClass ?> the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function findModel(<?= $actionParams ?>)
+    protected function findModel(<?= $actionParams ?>, $layout = null)
     {
 <?php
 if (count($pks) === 1) {
@@ -236,7 +245,7 @@ if (count($pks) === 1) {
     $condition = '[' . implode(', ', $condition) . ']';
 }
 ?>
-        if (($model = <?= $modelClass ?>::findOne(<?= $condition ?>)) !== null) {
+        if (($model = <?= $modelClass ?>::findOne(<?= $condition ?>, $layout)) !== null) {
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');

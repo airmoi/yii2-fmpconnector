@@ -106,7 +106,7 @@ class Schema extends \yii\db\Schema
     {
         //Check if Layout exists
         $table->baseTable = $this->getlayout($name)->table; 
-        $table->layouts[] = $table->name = $table->fullName = $name;
+        $table->layouts[] = $table->name = $table->fullName = $table->defaultLayout = $name;
         
         return $name;
     }
@@ -205,6 +205,7 @@ class Schema extends \yii\db\Schema
                 if( !isset($table->relations[$column->relationName])){
                     $tableSchema =  new TableSchema();
                     $tableSchema->name = $tableSchema->fullName = $column->relationName;
+                    $tableSchema->defaultLayout = $table->defaultLayout;
                     $table->relations[$column->relationName] = $tableSchema;
                 }
                 else {
@@ -275,6 +276,8 @@ class Schema extends \yii\db\Schema
                     $tableSchema->name = $relation->name;
                     $tableSchema->fullName =  $relationName;
                     $tableSchema->isPortal = true;
+                    $tableSchema->defaultLayout = $layoutName;
+                    $tableSchema->baseTable = $relation->name;
 
                     //Store _recid PK as field
                     $pk = $this->createColumnSchema();
@@ -286,6 +289,10 @@ class Schema extends \yii\db\Schema
 
                     $tableSchema->columns['_recid'] = $pk;
                 }
+                
+                
+                $tableSchema->layouts[] = $layoutName;
+                
                 foreach( $relation->getFields() as $field ){
                     $column = $this->loadColumnSchema($field);
                     $tableSchema->columns[$column->name] = $column;
