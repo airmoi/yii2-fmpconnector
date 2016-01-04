@@ -114,10 +114,10 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     public static function findOne($condition, $layout = null){
         if(!ArrayHelper::isAssociative($condition)) {
-            return self::find($layout)->getRecordById($condition);
+            return static::find($layout)->getRecordById($condition);
         }
 
-        return self::find($layout)->andWhere($condition)->one();
+        return static::find($layout)->andWhere($condition)->one();
     }
     
     /**
