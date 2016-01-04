@@ -228,6 +228,10 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     public function prepare()
     {
+        //No prepare when retirving record from its ID
+        if($this->_cmd instanceof \airmoi\FileMaker\Command\Find && $this->_cmd->recordId !== null){
+            return;
+        }
         $this->applyFilterAll();
         
         //Add requests
@@ -827,6 +831,11 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         return json_encode($command);
     }
     
+    /**
+     * 
+     * @param int $id
+     * @return FileMakerActiveRecord
+     */
     public function getRecordById($id){
         $this->_cmd = $this->db->newFindCommand($this->layout);
         $this->_cmd->setRecordId($id);
