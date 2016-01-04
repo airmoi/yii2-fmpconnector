@@ -158,7 +158,7 @@ class Schema extends \yii\db\Schema
         /**
          * Dirty hack to prevent field edition on calculated / conatiners fields (will be ignored in generated rules)
          */
-        $column->autoIncrement = $field->isAutoEntered() || $field->type=='calculation';
+        $column->autoIncrement = $field->type=='calculation';
         
         $column->unsigned = false;
         $column->comment = "";
@@ -295,7 +295,26 @@ class Schema extends \yii\db\Schema
                 
                 foreach( $relation->getFields() as $field ){
                     $column = $this->loadColumnSchema($field);
-                    $tableSchema->columns[$column->name] = $column;
+                    //handle related Fields from different OT
+                    if($column->isRelated && $column->relationName !=  $tableSchema->name){
+                        if( !isset($tableSchema->relations[$column->relationName])){
+                            $relatedSchema =  new TableSchema();
+                            $relatedSchema->name = $relatedSchema->fullName = $column->relationName;
+                            $relatedSchema->defaultLayout = $table->defaultLayout;
+                            $tableSchema->relations[$column->relationName] = $relatedSchema;
+                        }
+                        else {
+                            $relatedSchema = $table->relations[$column->relationName];
+                        }
+
+                        if ( !isset( $relatedSchema->columns[$column->name]) ) {
+                            $relatedSchema->columns[$column->name] = $column;
+                        }
+                        //$table->relations[$column->relationName][1][$column->name] = $column;
+                    }
+                    elseif ( !isset( $tableSchema->columns[$column->name]) ) {
+                        $tableSchema->columns[$column->name] = $column;
+                    }
                 }
 
                 $table->relations[$relationName] = $tableSchema ;

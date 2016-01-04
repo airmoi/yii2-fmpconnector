@@ -49,17 +49,8 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
 } else {
     
     foreach ($generator->getTableSchema()->columns as $column) {
-        if ($column->dbType == 'container') {
-            echo "            [\n"
-               . "              'attribute' => '".$column->name."',\n"
-               . "              'format' => 'image',\n"
-               . "              'value' => yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->".$column->name.")]),\n"
-               ."            ],\n";
-        }
-        else {
-            $format = $generator->generateColumnFormat($column);
-            echo "            '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
-        }
+        echo $generator->generateListViewColumn($column);
+        
     }
     
     //Single related fields
@@ -67,7 +58,8 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
         if(!$relatedTableSchema->isPortal) {
             foreach( $relatedTableSchema->columns as $column) {  
                 $format = $generator->generateColumnFormat($column);
-                echo "            '" . $relatedTableSchema->fullName . '.' . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+                echo $generator->generateListViewColumn($column, false, $relatedTableSchema->fullName);
+                //echo "            '" . $relatedTableSchema->fullName . '.' . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
             }
         }
     }
@@ -103,32 +95,17 @@ GridView::widget([
         ['class' => 'yii\grid\SerialColumn'],
         <?php 
             $count = 0;
-            foreach( $relatedTableSchema->columns as $column) { 
-                if (++$count < 6) {
-                    if ($column->dbType == 'container') {
-                        echo "            [\n"
-                           . "              'attribute' => '".$column->name."',\n"
-                           . "              'format' => 'image',\n"
-                           . "              'value' => function(\$model) use (\$parentId) { return yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->".$column->name.")]);},\n"
-                           ."            ],\n";
-                    }
-                    else {
+            foreach( $relatedTableSchema->columns as $column) {
+                echo $generator->generateGridViewColumn($column, ++$count > 6);
+            }
+            
+            //Single related fields
+            foreach ($relatedTableSchema->relations as $relatedTableSchema2){
+                    foreach( $relatedTableSchema2->columns as $column) {  
                         $format = $generator->generateColumnFormat($column);
-                        echo "            '" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
+                        echo $generator->generateGridViewColumn($column, ++$count > 6, $relatedTableSchema2->fullName);
+                        //echo "            '" . $relatedTableSchema->fullName . '.' . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
                     }
-                } else {
-                    if ($column->dbType == 'container') {
-                        echo "            //[\n"
-                           . "            //    'attribute' => '".$column->name."',\n"
-                           . "            //    'format' => 'image',\n"
-                           . "            //    'value' => function(\$model) use (\$parentId) { return yii\helpers\Url::to(['container', 'token' => \$model->encryptContainerUrl(\$model->".$column->name.")]);},\n"
-                           . "            //],\n";
-                    }
-                    else {
-                        $format = $generator->generateColumnFormat($column);
-                        echo "            //'" . $column->name . ($format === 'text' ? "" : ":" . $format) . "',\n";
-                    }
-                }
             }
         ?>
             [
