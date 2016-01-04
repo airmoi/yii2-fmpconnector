@@ -142,6 +142,12 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * of [[modelClass]] will be created to represent each record.
      */
     public $asArray;
+    
+    /**
+     * Conditions that will be applied to all requets
+     * @var array 
+     */
+    public $filterAll = [];
     /**
      *
      * @var \airmoi\FileMaker\Object\Result 
@@ -149,6 +155,8 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     private $_result;
     
     public $_recordId;
+    
+    
 
     /**
      * Constructor.
@@ -220,17 +228,20 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     public function prepare()
     {
-        $emptyRequest = true;
+        $this->applyFilterAll();
+        
         //Add requests
         foreach($this->_requests as $i => $findrequest){
             if( !$findrequest->isEmpty()) {
                 $this->_cmd->add($i, $findrequest);
-                $emptyRequest = false;
+            }
+            else {
+                unset($this->_requests[$i]);
             }
         }
         
-        //Tranform query to findall query if no find request set
-        if($emptyRequest && $this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind){
+        //Tranform query to findall query if no find request set (empty CompoundFind are to supported by cwp)
+        if(!sizeof($this->_requests) && $this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind){
             $this->_cmd = $this->db->newFindAllCommand($this->layout);
         }
         
@@ -495,6 +506,58 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     }
     
     /**
+     * Add a WHERE condition that will be applied to all requests that are not omit queries
+     * when performing the query
+     * @param array $condition the new WHERE condition (name => value)
+     * @return static the query object itself
+     * @see where()
+     * @see orWhere()
+     */
+    public function filterAll($condition)
+    {
+        $this->filterAll = [['and', $condition]];
+        /*foreach($condition as $fieldName => $testvalue) {
+            if(!empty($testvalue)) {
+                $this->filterAll[$fieldName] = $testvalue;
+            }
+        }*/
+        return $this;
+    }
+    
+    /**
+     * Add a additionnal WHERE condition that will be applied to all requests that are not omit queries
+     * when performing the query
+     * @param array $condition the new WHERE condition (name => value)
+     * @return static the query object itself
+     * @see where()
+     * @see orWhere()
+     */
+    public function andFilterAll($condition)
+    {
+        $this->filterAll[] = ['and', $condition];
+        /*foreach($condition as $fieldName => $testvalue) {
+            if(!empty($testvalue)) {
+                $this->filterAll[$fieldName] = $testvalue;
+            }
+        }*/
+        return $this;
+    }
+    
+    /**
+     * Add a additionnal WHERE condition that will be applied to all requests that are not omit queries
+     * when performing the query
+     * @param array $condition the new WHERE condition (name => value)
+     * @return static the query object itself
+     * @see where()
+     * @see orWhere()
+     */
+    public function orFilterAll($condition)
+    {
+        $this->filterAll[] = ['or', $condition];
+        return $this;
+    }
+    
+    /**
      * Adds an additional WHERE condition to the existing one.
      * The new condition and the existing one will be joined using the 'AND' operator.
      * @param array $condition the new WHERE condition (name => value)
@@ -592,6 +655,22 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     
     public function addAfterFindScript ($scriptname, $scriptParams = null){
         $this->_scripts['afterFind'] = [$scriptname, $scriptParams];
+    }
+    
+    /**
+     * Add a new request to the query stack and allow direct access to the object 
+     * @param array $condition @see where()
+     * @param string $layout specifi layout to use for the request
+     * @return \airmoi\FileMaker\Command\FindRequest
+     */
+    public function addRequest ($condition, $layout = null){
+        if( $layout === null ) {
+            $layout = $this->layout;
+        }
+        $this->_currentRequest = $this->db->newFindRequest($layout);
+        $this->_requests[] = $this->_currentRequest;
+        $this->andWhere($condition);
+        return $this->_currentRequest;
     }
 
     /**
@@ -785,5 +864,39 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     {
     	$this->relatedSetFilter = $relatedsetsfilter;
         $this->relatedSetMax = $relatedsetsmax;
+    }
+    
+    /**
+     * Apply filterAll to all requets
+     */
+    private function applyFilterAll() {
+        foreach ( $this->filterAll as $condition) {
+            if ( $condition[0] = 'and') {
+                foreach ( $this->_requests as $request) {
+                    if(!$request->omit) {
+                        $this->_currentRequest = $request;
+                        $this->andWhere($condition[1]);
+                    }
+                }
+            } else {
+                $this->applyOrFilterAll($condition[1]);
+            }
+        }
+    }
+    
+    /**
+     * 
+     * @param array $condition the WHERE condition (name => value) to apply
+     */
+    private function applyOrFilterAll($condition){
+        $newRequests = [];
+        foreach ( $this->_requests as $request ){
+            $newRequests[] = $request;
+            if(!$request->omit) {
+                $this->_currentRequest = clone $request;
+                $this->andWhere($condition);
+                $newRequests[] = $this->_currentRequest;
+            }
+        }
     }
 }
