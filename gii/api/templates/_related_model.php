@@ -15,7 +15,7 @@ $layoutList = $tableSchema->layouts;
 
 
 <?php $rules = $generator->generateRules($tableSchema) ?>
-/*
+/**
  * This is the model class for related records "<?= $generator->generateTableName($relationName) ?>".
 <?php foreach ($tableSchema->columns as $column): ?>
  * @property <?= "{$column->phpType} \${$column->name}\n" ?>
