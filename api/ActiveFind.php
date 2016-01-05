@@ -449,6 +449,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     {
         try {
             $result = $this->execute();
+            if($result->getFetchCount() == 0){
+                return null;
+            }
             $rows = $result->getFirstRecord();
         }
         catch (\Exception $e){
