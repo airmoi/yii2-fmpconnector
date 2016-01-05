@@ -488,7 +488,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->_requests = [$this->_currentRequest];
         foreach($condition as $fieldName => $testvalue) {
             if(!empty($testvalue)) {
-                $this->_currentRequest->addFindCriterion($fieldName, $testvalue);
+                $this->_currentRequest->addFindCriterion($fieldName, '=="'.$testvalue.'"');
             }
         }
         return $this;
@@ -506,7 +506,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     {
         foreach($condition as $fieldName => $testvalue) {
             if(!empty($testvalue)) {
-                $this->_currentRequest->addFindCriterion($fieldName, $testvalue);
+                $this->_currentRequest->addFindCriterion($fieldName, '=="'.$testvalue.'"');
             }
         }
         return $this;
