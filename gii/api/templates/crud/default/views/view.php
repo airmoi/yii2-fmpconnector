@@ -49,8 +49,13 @@ if (($tableSchema = $generator->getTableSchema()) === false) {
 } else {
     
     foreach ($generator->getTableSchema()->columns as $column) {
-        echo $generator->generateListViewColumn($column);
-        
+        if( $column->maxRepeat > 1) {
+            for ($i = 1; $i <= $column->maxRepeat; $i++) {
+                echo $generator->generateListViewColumn($column, null, null, $i); 
+            }
+        } else {
+            echo $generator->generateListViewColumn($column); 
+        }
     }
     
     //Single related fields
@@ -96,7 +101,13 @@ GridView::widget([
         <?php 
             $count = 0;
             foreach( $relatedTableSchema->columns as $column) {
-                echo $generator->generateGridViewColumn($column, ++$count > 6);
+                if( $column->maxRepeat > 1) {
+                    for ($i = 1; $i <= $column->maxRepeat; $i++) {
+                        echo $generator->generateGridViewColumn($column, ++$count > 6, null, $i); 
+                    }
+                } else {
+                    echo $generator->generateGridViewColumn($column, ++$count > 6);
+                }
             }
             
             //Single related fields

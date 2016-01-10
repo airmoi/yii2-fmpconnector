@@ -99,9 +99,9 @@ class Generator extends \yii\gii\generators\crud\Generator
         }
     }
     
-    public function generateGridViewColumn($column, $isComment = false, $relationName = null){
+    public function generateGridViewColumn($column, $isComment = false, $relationName = null, $repetition = null){
         $commentString = $isComment ? '//' : '' ;
-        $attributeName = ($relationName !== null ? $relationName . '.' : '' ) . $column->name;
+        $attributeName = ($relationName !== null ? $relationName . '.' : '' ) . $column->name . ($repetition !== null ? "[$repetition]" : '');
         if ($column->dbType == 'container') {
             return "            $commentString [\n"
                . "              $commentString'attribute' => '".$attributeName."',\n"
@@ -115,9 +115,10 @@ class Generator extends \yii\gii\generators\crud\Generator
         }
     }
     
-    public function generateListViewColumn($column, $isComment = false, $relationName = null){
+    public function generateListViewColumn($column, $isComment = false, $relationName = null, $repetition = null){
         $commentString = $isComment ? '//' : '' ;
-        $attributeName = ($relationName !== null ? $relationName . '.' : '' ) . $column->name;
+        $attributeName = ($relationName !== null ? $relationName . '.' : '' ) . $column->name . ($repetition !== null ? "[$repetition]" : '');
+         
         if ($column->dbType == 'container') {
             echo "           $commentString [\n"
                . "              $commentString 'attribute' => '".$attributeName."',\n"

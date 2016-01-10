@@ -154,6 +154,7 @@ class Schema extends \yii\db\Schema
         $column->fmType = $field->type;
         $column->global = $field->isGlobal();
         $column->valueList = $field->valueList;
+        $column->maxRepeat = $field->maxRepeat;
         
         /**
          * Dirty hack to prevent field edition on calculated / conatiners fields (will be ignored in generated rules)

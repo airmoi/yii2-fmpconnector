@@ -18,7 +18,7 @@ $layoutList = $tableSchema->layouts;
 /**
  * This is the model class for related records "<?= $generator->generateTableName($relationName) ?>".
 <?php foreach ($tableSchema->columns as $column): ?>
- * @property <?= "{$column->phpType} \${$column->name}\n" ?>
+ * @property <?= "{$column->phpType}".($column->maxRepeat > 1 ? '[]' : '' )." \${$column->name}".($column->maxRepeat > 1 ? ' Multivalue, '.$column->maxRepeat. ' repetitions' : '' )."\n" ?>
 <?php endforeach; ?>
  *
 <?php foreach ($relations as $name => $relation): ?>

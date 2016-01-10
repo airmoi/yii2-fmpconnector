@@ -30,7 +30,7 @@ use airmoi\yii2fmconnector\api\FileMakerRelatedRecord;
  * This is the model class for table "<?= $generator->generateTableName($tableName) ?>".
  *
 <?php foreach ($tableSchema->columns as $column): ?>
- * @property <?= "{$column->phpType} \${$column->name}\n" ?>
+ * @property <?= "{$column->phpType}".($column->maxRepeat > 1 ? '[]' : '' )." \${$column->name} ".($column->maxRepeat > 1 ? 'Multivalued, '.$column->maxRepeat. ' repetitions' : '' )."\n" ?>
 <?php endforeach; ?>
  *
 <?php foreach ($relations as $name => $relation): ?>

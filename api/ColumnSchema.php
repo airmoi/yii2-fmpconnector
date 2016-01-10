@@ -22,6 +22,7 @@ class ColumnSchema extends \yii\db\ColumnSchema
 {
     public $fmType;
     public $global;
+    public $maxRepeat;
     
     public $isRelated;
     public $relationName;

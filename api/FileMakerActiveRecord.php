@@ -48,6 +48,13 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     protected static $_layout; 
     
+    public function __get($name) {
+        if(preg_match('/^(\w+)\[(\d+)\]/', $name, $matches)){
+            return parent::__get($matches[1])[$matches[2]];
+        } else {
+            return parent::__get($name);
+        }
+    }
     /** 
      * @return Connection the database connection used by this AR class. 
      */ 
@@ -71,6 +78,13 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     public function attributes()
     {
         return array_keys($this->getDb()->getTableSchema($this->layoutName())->columns);
+    }
+    
+    public function getAttributeLabel($attribute) {
+        if(preg_match('/^(\w+)\[(\d+)\]/', $attribute, $matches)){
+            $attribute = $matches[1];
+        }
+        return parent::getAttributeLabel($attribute);
     }
     
     /**
@@ -261,15 +275,25 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     public static function populateRecordFromFm(FileMakerActiveRecord $record, \airmoi\FileMaker\Object\Record $fmRecord){
         $record->_record = $fmRecord;
+        $tableSchema = $record->isPortal ? static::getDb()->getTableSchema(static::layoutName())->relations[$record->relationName] : static::getDb()->getTableSchema(static::layoutName());
+        
+        /* @var $tableSchema airmoi\yii2fmconnector\api\TableSchema */
         $row = [];
         $attributePrefix = $record->isPortal ? $record->tableOccurence . '::' : '';
         foreach ($record->attributes() as $attribute){
-            $row[$attribute] = $fmRecord->getField($attributePrefix.$attribute);
+            if($tableSchema->columns[$attribute]->maxRepeat > 1){
+                $row[$attribute] = [];
+                for ($i = 0; $i <= $tableSchema->columns[$attribute]->maxRepeat; $i++) {
+                    $row[$attribute][$i] = $fmRecord->getField($attributePrefix.$attribute, $i);
+                }
+            } else {
+                $row[$attribute] = $fmRecord->getField($attributePrefix.$attribute);
+            }
         }
+        
         $row['_recid'] = $fmRecord->getRecordId();
         parent::populateRecord($record, $row);
         
-        $tableSchema = $record->isPortal ? static::getDb()->getTableSchema(static::layoutName())->relations[$record->relationName] : static::getDb()->getTableSchema(static::layoutName());
         //Populate relations
         foreach ( $tableSchema->relations as $relationName => $tableSchema){
             if( !$tableSchema->isPortal ){
