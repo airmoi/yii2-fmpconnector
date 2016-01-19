@@ -316,6 +316,10 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     protected function populateHasOneRelation( $relationName, TableSchema $tableSchema, \airmoi\FileMaker\Object\Record $record) {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
         
+        if(!class_exists($modelClass)){
+            \Yii::error($modelClass . ' does not exists' , 'FileMaker.fmConnector');
+            return;
+        }
         $model = $modelClass::instantiate([]);
         \Yii::configure($model, ['isPortal' => false, 'parent' => $this, 'relationName' =>$relationName, 'tableOccurence' => $tableSchema->name]);
         
@@ -334,8 +338,22 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      * @param string $relationName
      * @param \airmoi\FileMaker\Object\Record $record
      */
+    
+    /**
+     * 
+     * @param type $relationName
+     * @param type $record
+     * @return boolean
+     */
     public function newRelatedRecord( $relationName, $record = null ) {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
+        
+        
+        if(!class_exists($modelClass)){
+            \Yii::error($modelClass . ' does not exists' , 'FileMaker.fmConnector');
+            throw new yii\base\InvalidParamException("relation's model class $modelClass is missing");
+        }
+        
         $tableSchema = static::getDb()->getTableSchema(static::layoutName())->relations[$relationName];
         $model = $modelClass::instantiate([]); 
         
@@ -360,6 +378,11 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     protected function populateHasManyRelation( $relationName, TableSchema $tableSchema, \airmoi\FileMaker\Object\Record $record) {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
+        
+        if(!class_exists($modelClass)){
+            \Yii::error($modelClass . ' does not exists' , 'FileMaker.fmConnector');
+            return;
+        }
         
         try {
             $records = $record->getRelatedSet($tableSchema->name);
