@@ -229,7 +229,8 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function prepare()
     {
         //No prepare when retirving record from its ID
-        if($this->_cmd instanceof \airmoi\FileMaker\Command\Find && $this->_cmd->recordId !== null){
+        if($this->_cmd instanceof \airmoi\FileMaker\Command\Find && $this->_cmd->recordId !== null
+                || $this->_cmd instanceof \airmoi\FileMaker\Command\PerformScript){
             return;
         }
         $this->applyFilterAll();
@@ -271,6 +272,16 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
                 $this->_cmd->setScript($scriptOptions[0], $scriptOptions[1]);
             }
         }
+    }
+    
+    public function findByScript($scriptName, $scriptParameters) {
+        
+        $parameters = "";
+        foreach ($scriptParameters as $name => $value){
+           $parameters .= "<".$name.">".$value."</".$name.">";
+        }
+        $this->_cmd = $this->db->newPerformScriptCommand($this->resultLayout, $scriptName, $parameters);
+        
     }
     
     /**
