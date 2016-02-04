@@ -123,7 +123,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     public $offset;
     /**
-     * @var \airmoi\FileMaker\Command\CompoundFind
+     * @var \airmoi\FileMaker\Command\CompoundFind|\airmoi\FileMaker\Command\PerformScript
      */
     private $_cmd;
     /**
@@ -229,49 +229,52 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function prepare()
     {
         //No prepare when retirving record from its ID
-        if($this->_cmd instanceof \airmoi\FileMaker\Command\Find && $this->_cmd->recordId !== null
-                || $this->_cmd instanceof \airmoi\FileMaker\Command\PerformScript){
+        if($this->_cmd instanceof \airmoi\FileMaker\Command\Find && $this->_cmd->recordId !== null){
             return;
         }
-        $this->applyFilterAll();
         
-        //Add requests
-        foreach($this->_requests as $i => $findrequest){
-            if( !$findrequest->isEmpty()) {
-                $this->_cmd->add($i, $findrequest);
+        if( !$this->_cmd instanceof \airmoi\FileMaker\Command\PerformScript) {
+            $this->applyFilterAll();
+
+            //Add requests
+            foreach($this->_requests as $i => $findrequest){
+                if( !$findrequest->isEmpty()) {
+                    $this->_cmd->add($i, $findrequest);
+                }
+                else {
+                    unset($this->_requests[$i]);
+                }
             }
-            else {
-                unset($this->_requests[$i]);
+
+            //Tranform query to findall query if no find request set (empty CompoundFind are to supported by cwp)
+            if(!sizeof($this->_requests) && $this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind){
+                $this->_cmd = $this->db->newFindAllCommand($this->layout);
             }
-        }
         
-        //Tranform query to findall query if no find request set (empty CompoundFind are to supported by cwp)
-        if(!sizeof($this->_requests) && $this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind){
-            $this->_cmd = $this->db->newFindAllCommand($this->layout);
+            //Add sort rules
+            $precedence = 0;
+            foreach($this->orderBy as $fieldName => $order){
+                $this->_cmd->addSortRule($fieldName, ++$precedence, $order);
+            }
+            
+            foreach ( $this->_scripts as $position => $scriptOptions){
+                if($position == 'beforeFind'){
+                    $this->_cmd->setPreCommandScript($scriptOptions[0], $scriptOptions[1]);
+                } elseif($position == 'beforeSort'){
+                    $this->_cmd->setPreSortScript($scriptOptions[0], $scriptOptions[1]);
+                } elseif($position == 'afterFind'){
+                    $this->_cmd->setScript($scriptOptions[0], $scriptOptions[1]);
+                }
+            }
+            $this->_cmd->setRelatedSetsFilters($this->relatedSetFilter, $this->relatedSetMax);
         }
-        
-        //Add sort rules
-        $precedence = 0;
-        foreach($this->orderBy as $fieldName => $order){
-            $this->_cmd->addSortRule($fieldName, ++$precedence, $order);
-        }
-        
         //Apply limits & offset
         $this->offset = $this->offset == -1 ? null: $this->offset;
         $this->limit = $this->limit == -1 ? null: $this->limit;
         $this->_cmd->setRange($this->offset, $this->limit);
         $this->_cmd->setResultLayout($this->resultLayout);
-        $this->_cmd->setRelatedSetsFilters($this->relatedSetFilter, $this->relatedSetMax);
         
-        foreach ( $this->_scripts as $position => $scriptOptions){
-            if($position == 'beforeFind'){
-                $this->_cmd->setPreCommandScript($scriptOptions[0], $scriptOptions[1]);
-            } elseif($position == 'beforeSort'){
-                $this->_cmd->setPreSortScript($scriptOptions[0], $scriptOptions[1]);
-            } elseif($position == 'afterFind'){
-                $this->_cmd->setScript($scriptOptions[0], $scriptOptions[1]);
-            }
-        }
+       
     }
     
     public function findByScript($scriptName, $scriptParameters) {
@@ -281,7 +284,6 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
            $parameters .= "<".$name.">".$value."</".$name.">";
         }
         $this->_cmd = $this->db->newPerformScriptCommand($this->resultLayout, $scriptName, $parameters);
-        
     }
     
     /**
@@ -900,6 +902,16 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     {
     	$this->relatedSetFilter = $relatedsetsfilter;
         $this->relatedSetMax = $relatedsetsmax;
+    }
+
+    /**
+     * Set a global field to be define before perfoming the command. 
+     * 
+     * @param string $fieldName the global field name.
+     * @param string $fieldValue value to be set.
+     */
+    public function setGlobal($fieldName, $fieldValue) {
+        $this->_cmd->setGlobal($fieldName, $fieldValue);
     }
     
     /**
