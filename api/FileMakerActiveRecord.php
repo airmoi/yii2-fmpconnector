@@ -261,12 +261,13 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         }
         
         try {
+           $values = $this->getAttributes();
            $fm = static::getDb();
-           $request = $fm->newAddCommand(static::layoutName(), $this->getDirtyAttributes());
+           $request = $fm->newAddCommand(static::layoutName(), $values);
            $result = $request->execute();
            $this->_recid = $result->getFirstRecord()->getRecordId();
            
-            $this->afterSave(true, $changedAttributes);
+           $this->afterSave(true, $values);
            return true;
         } catch (\Exception $e) {
             throw $e;
