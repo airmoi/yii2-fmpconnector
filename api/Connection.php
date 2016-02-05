@@ -99,7 +99,7 @@ class Connection extends \yii\db\Connection
             Yii::endProfile($token, __METHOD__);
         } catch (\Exception $e) {
             Yii::endProfile($token, __METHOD__);
-            throw new Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
+            throw new \Exception($e->getMessage(), (int) $e->getCode(), $e);
         }
     }
     
@@ -133,7 +133,7 @@ class Connection extends \yii\db\Connection
         $this->dbName = explode('=', $connectionArray[1])[1];
         
         if(empty($this->dbName)){
-            throw new Exception("Please provide a DB Name");
+            throw new \Exception("Please provide a DB Name");
         }
     }
     
