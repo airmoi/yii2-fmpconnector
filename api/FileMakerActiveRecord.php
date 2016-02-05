@@ -256,11 +256,17 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             return false;
         }
         
+        if (!$this->beforeSave(true)) {
+            return false;
+        }
+        
         try {
            $fm = static::getDb();
            $request = $fm->newAddCommand(static::layoutName(), $this->getDirtyAttributes());
            $result = $request->execute();
            $this->_recid = $result->getFirstRecord()->getRecordId();
+           
+            $this->afterSave(true, $changedAttributes);
            return true;
         } catch (\Exception $e) {
             throw $e;
@@ -426,6 +432,9 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     public function update($runValidation = true, $attributeNames = null)
     {
+        if (!$this->beforeSave(false)) {
+            return false;
+        }
         if ($runValidation && !$this->validate($attributeNames)) {
             return false;
         }
@@ -441,6 +450,8 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
            $fm = static::getDb();
            $request = $fm->newEditCommand(static::layoutName(), $this->getRecId(), $values);
            $request->execute();
+           
+           $this->afterSave(false, $values);
            
             Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
             Yii::endProfile($token, 'yii\db\Command::query');
