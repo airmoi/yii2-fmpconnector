@@ -261,7 +261,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         }
         
         try {
-           $values = $this->getAttributes();
+           $values = $this->getDirtyAttributes();
            $fm = static::getDb();
            $request = $fm->newAddCommand(static::layoutName(), $values);
            $result = $request->execute();
