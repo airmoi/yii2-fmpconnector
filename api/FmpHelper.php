@@ -67,7 +67,7 @@ class FmpHelper extends Component {
     public $db = '';
     public $username = '';
     public $password = '';
-    public $uniqueSession = true;
+    public $useCookieSession = true;
     public $dateFormat;
     public $charset = 'utf-8';
     public $locale = 'en';
@@ -83,20 +83,12 @@ class FmpHelper extends Component {
     
     public function __construct($config = []) {
         \Yii::configure($this, $config);
-
     }
     
     public function init(){
     }
 
     private function initConnection() { 
-         if( $this->uniqueSession && file_exists(Yii::getAlias('@runtime').'/WPCSessionID')){
-            $this->_cookie = file_get_contents (Yii::getAlias('@runtime').'/WPCSessionID');
-            if ( @$_COOKIE["WPCSessionID"] != $this->_cookie)  {
-            	setcookie ('WPCSessionID', $this->_cookie) ;
-            	$_COOKIE["WPCSessionID"] = $this->_cookie;
-       		}
-        }
         if ( $this->_fm === null ) {
             $this->_fm = new FileMaker($this->db, $this->host, $this->username, $this->password);
             $this->_fm->setProperty('charset', $this->charset);
@@ -104,13 +96,11 @@ class FmpHelper extends Component {
             $this->_fm->setProperty('prevalidate', $this->prevalidate);
             $this->_fm->setProperty('curlOptions', $this->curlOptions);
             $this->_fm->setProperty('dateFormat', $this->dateFormat);
+            $this->_fm->setProperty('useCookieSession', $this->useCookieSession);
         }
     }
 
     private function endConnection() { 
-        if( $this->uniqueSession && isset($_COOKIE["WPCSessionID"]) && $_COOKIE["WPCSessionID"] != $this->_cookie ){
-            file_put_contents(Yii::getAlias('@runtime').'/WPCSessionID', $_COOKIE["WPCSessionID"]) ;
-        }   
     }
     
     public function performScript($scriptName, array $params){
@@ -214,7 +204,7 @@ class FmpHelper extends Component {
             $this->endConnection();
             return $this->_valueLists[$listName];
         }
-        catch ( airmoi\FileMaker\FileMakerException $e ){
+        catch ( FileMakerException $e ){
             Yii::error('Error getting value list "'.$listName. '" ('.$e->getMessage().')', __METHOD__);
             return [];
         }
@@ -242,7 +232,7 @@ class FmpHelper extends Component {
         elseif ( method_exists($this->_fm, $name))
                 return call_user_func_array([$this->_fm, $name], $params);
 
-        throw new UnknownMethodException('Calling unknown method: ' . get_class($this) . "::$name()");
+        throw new \yii\base\UnknownMethodException('Calling unknown method: ' . get_class($this) . "::$name()");
     }
     
     public static function mime_content_type($filename) {
