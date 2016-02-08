@@ -156,8 +156,13 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     {
         $recordId = $this->_recid;
         $command = static::getDb()->newDeleteCommand(static::$defaultLayout, $recordId);
-        $result = $command->execute();
-        return $result->getFoundSetCount();
+        try {
+            $result = $command->execute();
+            return 1;
+        } catch (\airmoi\FileMaker\FileMakerException $e) {
+            $this->addError('delete', $e->getMessage());
+            return 0;
+        }
     }
     
     /**
