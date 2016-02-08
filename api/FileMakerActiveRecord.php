@@ -135,6 +135,32 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     }
     
     /**
+     * Deletes the table row corresponding to this active record.
+     *
+     * This method performs the following steps in order:
+     *
+     * 1. call [[beforeDelete()]]. If the method returns false, it will skip the
+     *    rest of the steps;
+     * 2. delete the record from the database;
+     * 3. call [[afterDelete()]].
+     *
+     * In the above step 1 and 3, events named [[EVENT_BEFORE_DELETE]] and [[EVENT_AFTER_DELETE]]
+     * will be raised by the corresponding methods.
+     *
+     * @return integer|false the number of rows deleted, or false if the deletion is unsuccessful for some reason.
+     * Note that it is possible the number of rows deleted is 0, even though the deletion execution is successful.
+     * @throws FileMakerException
+     * @throws \Exception in case delete failed.
+     */
+    public function delete()
+    {
+        $recordId = $this->_recid;
+        $command = static::getDb()->newDeleteCommand(static::$defaultLayout, $recordId);
+        $result = $command->execute();
+        return $result->getFoundSetCount();
+    }
+    
+    /**
      * @return string default FileMaker layout used by this model
      */
     public static function layoutName() {
