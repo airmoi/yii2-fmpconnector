@@ -56,7 +56,7 @@ class <?= $className ?> extends FileMakerActiveRecord
     ];
     
     /**
-     * @var array all available FileMaker layouts for this model
+     * @return array all available FileMaker layouts for this model
      */
     public static function listLayouts()
     {
@@ -68,7 +68,7 @@ class <?= $className ?> extends FileMakerActiveRecord
     }
     
     /**
-     * @var array all available FileMaker layouts for this model
+     * @return array An array of [ attributeName => valueListName ]
      */
     public function attributeValueLists()
     {
@@ -82,7 +82,7 @@ class <?= $className ?> extends FileMakerActiveRecord
     }
     
     /**
-     * @var string default FileMaker layout used by this model
+     * @return string default FileMaker layout used by this model
      */
     public static function layoutName()
     {
@@ -90,7 +90,7 @@ class <?= $className ?> extends FileMakerActiveRecord
     }
     
     /**
-     * @var string default FileMaker layout to be used for search queries
+     * @return string default FileMaker layout to be used for search queries
      */
     public static function searchLayoutName()
     {
@@ -127,14 +127,16 @@ class <?= $className ?> extends FileMakerActiveRecord
         ];
     }
 <?php foreach ($relations as $name => $fields): ?>
-
+<?php
+    //Disable this part until "findFor" is not implemented
     /**
      * @return <?= ucfirst($name) ?>
      */
-     public function get<?= ucfirst($name) ?>()
+     /*public function get<?= ucfirst($name) ?>()
     {
         //TODO retrievex related records ?
-    }
+    } */
+    ?>
 <?php endforeach; ?>
 <?php if ($queryClassName): ?>
 <?php
