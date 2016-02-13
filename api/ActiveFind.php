@@ -868,6 +868,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function getRecordById($id){
         $this->_cmd = $this->db->newFindCommand($this->layout);
         $this->_cmd->setRecordId($id);
+        $this->_cmd->setResultLayout($this->resultLayout);
         return $this->one();
     }
     
