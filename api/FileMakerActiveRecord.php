@@ -297,6 +297,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
            $request = $fm->newAddCommand(static::layoutName(), $values);
            $result = $request->execute();
            $this->_recid = $result->getFirstRecord()->getRecordId();
+           self::populateRecordFromFm($this, $result->getFirstRecord());
            
            $this->afterSave(true, $values);
            return true;
