@@ -43,7 +43,7 @@ $layoutList = $tableSchema->layouts;
 <?php endif; ?>
     
     /**
-     * @return array @return array An array of [ attributeName => valueListName ]
+     * @return array An array of [ attributeName => valueListName ]
      */
     public function attributeValueLists()
     {
