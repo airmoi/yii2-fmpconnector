@@ -159,7 +159,7 @@ class Schema extends \yii\db\Schema
         /**
          * Dirty hack to prevent field edition on calculated / conatiners fields (will be ignored in generated rules)
          */
-        $column->autoIncrement = $field->type=='calculation';
+        $column->autoIncrement = ($field->type=='calculation' or $column->isPrimaryKey);
         
         $column->unsigned = false;
         $column->comment = "";
