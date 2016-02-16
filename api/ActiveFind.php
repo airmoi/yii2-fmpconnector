@@ -500,9 +500,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_requests = [$this->_currentRequest];
         foreach($condition as $fieldName => $testvalue) {
-            if(!empty($testvalue)) {
-                $this->_currentRequest->addFindCriterion($fieldName, '=="'.$testvalue.'"');
-            }
+            //if(!$testvalue == '' ) {
+                $this->_currentRequest->addFindCriterion($fieldName, '=='.$testvalue.'');
+            //}
         }
         return $this;
     }
@@ -518,9 +518,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function andWhere($condition)
     {
         foreach($condition as $fieldName => $testvalue) {
-            if(!empty($testvalue)) {
-                $this->_currentRequest->addFindCriterion($fieldName, '=="'.$testvalue.'"');
-            }
+            //if(!$testvalue=='') {
+                $this->_currentRequest->addFindCriterion($fieldName, '=='.$testvalue.'');
+            //}
         }
         return $this;
     }
@@ -593,7 +593,10 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_requests = [$this->_currentRequest];
         foreach($condition as $fieldName => $testvalue) {
-            if(!empty($testvalue)) {
+            if(!$testvalue == '') {
+                if ( $testvalue == null ){
+                    $testvalue = '=';
+                }
                 $this->_currentRequest->addFindCriterion($fieldName, $testvalue);
             }
         }
@@ -611,7 +614,10 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function andFilterWhere(array $condition)
     {
         foreach($condition as $fieldName => $testvalue) {
-            if(!empty($testvalue)) {
+            if(!$testvalue == '') {
+                if ( $testvalue == null ){
+                    $testvalue = '=';
+                }
                 $this->_currentRequest->addFindCriterion($fieldName, $testvalue);
             }
         }
