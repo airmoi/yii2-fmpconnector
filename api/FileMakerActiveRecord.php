@@ -230,7 +230,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     
     
     public function load($data, $formName = NULL ) {
-        $loaded = (int) parent::load($data);
+        $loaded = (int) parent::load($data, $formName);
         
         foreach ($this->getRelatedRecords() as $relationName => $records) {
             if($records instanceof FileMakerRelatedRecord && !$records->isPortal){
