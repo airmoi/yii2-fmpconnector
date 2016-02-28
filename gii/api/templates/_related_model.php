@@ -43,7 +43,7 @@ $layoutList = $tableSchema->layouts;
 <?php endif; ?>
     
     /**
-     * @var array all available FileMaker layouts for this model
+     * @return array An array of [ attributeName => valueListName ]
      */
     public function attributeValueLists()
     {

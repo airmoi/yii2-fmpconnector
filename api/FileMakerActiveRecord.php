@@ -230,7 +230,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     
     
     public function load($data, $formName = NULL ) {
-        $loaded = (int) parent::load($data);
+        $loaded = (int) parent::load($data, $formName);
         
         foreach ($this->getRelatedRecords() as $relationName => $records) {
             if($records instanceof FileMakerRelatedRecord && !$records->isPortal){
@@ -297,6 +297,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
            $request = $fm->newAddCommand(static::layoutName(), $values);
            $result = $request->execute();
            $this->_recid = $result->getFirstRecord()->getRecordId();
+           self::populateRecordFromFm($this, $result->getFirstRecord());
            
            $this->afterSave(true, $values);
            return true;

@@ -500,9 +500,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_requests = [$this->_currentRequest];
         foreach($condition as $fieldName => $testvalue) {
-            if(!empty($testvalue)) {
-                $this->_currentRequest->addFindCriterion($fieldName, '=="'.$testvalue.'"');
-            }
+            //if(!$testvalue == '' ) {
+                $this->_currentRequest->addFindCriterion($fieldName, '=='.$testvalue.'');
+            //}
         }
         return $this;
     }
@@ -518,9 +518,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function andWhere($condition)
     {
         foreach($condition as $fieldName => $testvalue) {
-            if(!empty($testvalue)) {
-                $this->_currentRequest->addFindCriterion($fieldName, '=="'.$testvalue.'"');
-            }
+            //if(!$testvalue=='') {
+                $this->_currentRequest->addFindCriterion($fieldName, '=='.$testvalue.'');
+            //}
         }
         return $this;
     }
@@ -593,7 +593,10 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_requests = [$this->_currentRequest];
         foreach($condition as $fieldName => $testvalue) {
-            if(!empty($testvalue)) {
+            if(!$testvalue == '') {
+                if ( $testvalue == null ){
+                    $testvalue = '=';
+                }
                 $this->_currentRequest->addFindCriterion($fieldName, $testvalue);
             }
         }
@@ -611,7 +614,10 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function andFilterWhere(array $condition)
     {
         foreach($condition as $fieldName => $testvalue) {
-            if(!empty($testvalue)) {
+            if(!$testvalue == '') {
+                if ( $testvalue == null ){
+                    $testvalue = '=';
+                }
                 $this->_currentRequest->addFindCriterion($fieldName, $testvalue);
             }
         }
@@ -868,6 +874,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function getRecordById($id){
         $this->_cmd = $this->db->newFindCommand($this->layout);
         $this->_cmd->setRecordId($id);
+        $this->_cmd->setResultLayout($this->resultLayout);
         return $this->one();
     }
     
@@ -919,11 +926,11 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     private function applyFilterAll() {
         foreach ( $this->filterAll as $condition) {
-            if ( $condition[0] = 'and') {
+            if ( $condition[0] == 'and') {
                 foreach ( $this->_requests as $request) {
                     if(!$request->omit) {
                         $this->_currentRequest = $request;
-                        $this->andWhere($condition[1]);
+                        $this->andFilterWhere($condition[1]);
                     }
                 }
             } else {
@@ -942,9 +949,10 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
             $newRequests[] = $request;
             if(!$request->omit) {
                 $this->_currentRequest = clone $request;
-                $this->andWhere($condition);
+                $this->andFilterWhere($condition);
                 $newRequests[] = $this->_currentRequest;
             }
         }
+        $this->_requests = $newRequests;
     }
 }

@@ -227,10 +227,12 @@ class FmpHelper extends Component {
     {
         $this->initConnection();
         
-        if ( method_exists($this, $name))
+        if ( method_exists($this, $name)){
                 return call_user_func_array([$this, $name], $params);
-        elseif ( method_exists($this->_fm, $name))
+        }
+        elseif ( method_exists($this->_fm, $name)) {
                 return call_user_func_array([$this->_fm, $name], $params);
+        }
 
         throw new \yii\base\UnknownMethodException('Calling unknown method: ' . get_class($this) . "::$name()");
     }
