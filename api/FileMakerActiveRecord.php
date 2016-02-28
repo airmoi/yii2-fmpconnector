@@ -491,6 +491,8 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         } catch (\Exception $e) {
             Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
             Yii::endProfile($token, 'yii\db\Command::query');
+            $this->addError('', $e->getMessage());
+            return false;
             throw new \yii\db\Exception($e->getMessage() . '(' . $e->getCode() . ')', $e->getCode());
         }
     }
