@@ -20,11 +20,9 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     
     /**
      *
-     * @var array 
+     * @var \airmoi\FileMaker\Object\Layout 
      */
-    protected $_attributes; 
-    
-    public $isPortal;
+    protected static $_layout;
     
     /**
      *
@@ -36,17 +34,28 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      * @var \airmoi\FileMaker\Object\Field[]
      */
     protected static $_attributesProperties;
+    
+    /**
+     * Wether this model represent records from a portal view
+     * @var bool 
+     */
+    public $isPortal = false;
+
+    /**
+     *
+     * @var array 
+     */
+    protected $_attributes; 
+    
+    
     /**
      *
      * @var \airmoi\FileMaker\Object\Record 
      */
     protected $_record;  
     
-    /**
-     *
-     * @var \airmoi\FileMaker\Object\Layout 
-     */
-    protected static $_layout; 
+    private $_globals = [];
+     
     
     public function __get($name) {
         if(preg_match('/^(\w+)\[(\d+)\]/', $name, $matches)){
@@ -295,6 +304,10 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
            $values = $this->getDirtyAttributes();
            $fm = static::getDb();
            $request = $fm->newAddCommand(static::layoutName(), $values);
+           
+           foreach($this->_globals as $fieldName => $fieldValue) {
+               $request->setGlobal($fieldName, $fieldValue);
+           }
            $result = $request->execute();
            $this->_recid = $result->getFirstRecord()->getRecordId();
            self::populateRecordFromFm($this, $result->getFirstRecord());
@@ -450,6 +463,10 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         return $this->_recid;
     }
     
+    public function setGlobals($fieldName, $fieldValue) {
+        $this->_globals[$fieldName] = $fieldValue;
+    }
+    
     /**
      * 
      * @param boolean $runValidation whether to perform validation (calling [[validate()]])
@@ -474,14 +491,20 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         
         $values = $this->getDirtyAttributes($attributeNames);
         if( empty($values) ){
-            $this->addError('general', \Yii::t('app', 'Nothing to update'));
-            return false;
+            //$this->addError('general', \Yii::t('app', 'Nothing to update'));
+            $this->afterSave(false, $values);
+            return true;
         }
         try {
            $token = 'update '.__CLASS__ . ' '.$this->getRecId();
            Yii::beginProfile($token, 'yii\db\Command::query');
            $fm = static::getDb();
            $request = $fm->newEditCommand(static::layoutName(), $this->getRecId(), $values);
+           
+           foreach($this->_globals as $fieldName => $fieldValue) {
+               $request->setGlobal($fieldName, $fieldValue);
+           }
+           
            $request->execute();
            
            $this->afterSave(false, $values);
