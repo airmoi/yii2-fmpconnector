@@ -904,11 +904,14 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      *                 If "Show vertical scroll bar" is disabled, the Portal 
      *                 Setup dialog box's "Number of rows" setting determines 
      *                 the maximum number of related records to return. 
+     * 
+     * @return static the query object itself.
      */
     public function setRelatedSetsFilters($relatedsetsfilter, $relatedsetsmax = null)
     {
     	$this->relatedSetFilter = $relatedsetsfilter;
         $this->relatedSetMax = $relatedsetsmax;
+        return $this;
     }
 
     /**
@@ -916,9 +919,12 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * 
      * @param string $fieldName the global field name.
      * @param string $fieldValue value to be set.
+     * 
+     * @return static the query object itself.
      */
     public function setGlobal($fieldName, $fieldValue) {
         $this->_cmd->setGlobal($fieldName, $fieldValue);
+        return $this;
     }
     
     /**
