@@ -904,11 +904,14 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      *                 If "Show vertical scroll bar" is disabled, the Portal 
      *                 Setup dialog box's "Number of rows" setting determines 
      *                 the maximum number of related records to return. 
+     * 
+     * @return static the query object itself.
      */
     public function setRelatedSetsFilters($relatedsetsfilter, $relatedsetsmax = null)
     {
     	$this->relatedSetFilter = $relatedsetsfilter;
         $this->relatedSetMax = $relatedsetsmax;
+        return $this;
     }
 
     /**
@@ -916,9 +919,12 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * 
      * @param string $fieldName the global field name.
      * @param string $fieldValue value to be set.
+     * 
+     * @return static the query object itself.
      */
     public function setGlobal($fieldName, $fieldValue) {
         $this->_cmd->setGlobal($fieldName, $fieldValue);
+        return $this;
     }
     
     /**
@@ -926,11 +932,11 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     private function applyFilterAll() {
         foreach ( $this->filterAll as $condition) {
-            if ( $condition[0] = 'and') {
+            if ( $condition[0] == 'and') {
                 foreach ( $this->_requests as $request) {
                     if(!$request->omit) {
                         $this->_currentRequest = $request;
-                        $this->andWhere($condition[1]);
+                        $this->andFilterWhere($condition[1]);
                     }
                 }
             } else {
@@ -949,9 +955,10 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
             $newRequests[] = $request;
             if(!$request->omit) {
                 $this->_currentRequest = clone $request;
-                $this->andWhere($condition);
+                $this->andFilterWhere($condition);
                 $newRequests[] = $this->_currentRequest;
             }
         }
+        $this->_requests = $newRequests;
     }
 }
