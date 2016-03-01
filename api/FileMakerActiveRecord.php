@@ -521,7 +521,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             return [];
         }
         if($layoutName === null){
-            if($this->isPortal) {
+            if( $this->parent !== null ) {
                 $layoutName = $this->parentLayoutName(); 
             } else {
                 $layoutName = $this->layoutName();
@@ -529,7 +529,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         }
         $valueList = $this->attributeValueLists()[$attribute];
         $layout = static::getDb()->getSchema()->getlayout($layoutName);
-        $recid = $this->isPortal ? $this->getParent()->getRecid() : $this->getRecId();
+        $recid = $this->parent !== null ? $this->getParent()->getRecid() : $this->getRecId();
         
         return array_flip($layout->getValueListTwoFields($valueList, $byRecId ? $recid : null));
     }
