@@ -52,9 +52,21 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      *
      * @var \airmoi\FileMaker\Object\Record 
      */
-    protected $_record;  
+    protected $_record;
     
-    private $_globals = [];
+    /**
+     * Globals to be set on update/save queries
+     * @var array array of fieldName => value 
+     */
+    private $_globals = [];   
+    
+    /**
+     * the parent record instance when Model is a related record 
+     * @var FileMakerActiveRecord
+     */
+    private $_parent;
+    
+    
      
     
     public function __get($name) {
@@ -373,7 +385,9 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             return;
         }
         $model = $modelClass::instantiate([]);
-        \Yii::configure($model, ['isPortal' => false, 'parent' => $this, 'relationName' =>$relationName, 'tableOccurence' => $tableSchema->name]);
+        $model->_parent = $this;
+        \Yii::configure($model, ['isPortal' => false, 'relationName' =>$relationName, 'tableOccurence' => $tableSchema->name]);
+        
         
         $row = [];
         foreach ( $tableSchema->columns as $fieldName => $config){
@@ -414,7 +428,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         }
         $model->_record = $record;
         $model->isPortal = true;
-        $model->parent = $this;
+        $model->_parent = $this;
         $model->relationName = $relationName;
         $model->tableOccurence = $tableSchema->name;
         //\Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName, '' => ]);
@@ -446,25 +460,35 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         foreach ( $records as $record ){
             $model = $this->newRelatedRecord($relationName, $record);
             self::populateRecordFromFm($model, $record);
-            /*foreach ( $tableSchema->columns  as $fieldName => $config){
-                $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
-            }
-            $row['_recid'] = $record->getRecordId();
-
-            parent::populateRecord($model, $row);*/
-            //$model->_recid = $record->getRecordId();
             $models[$record->getRecordId()] = $model;
         }
         
         $this->populateRelation($relationName, $models);
     }
     
+    /**
+     * 
+     * @return FileMakerActiveRecord
+     */
+    public function parentRecord() {
+        return $this->_parent;
+    }
+    
     public function getRecId(){
         return $this->_recid;
     }
     
-    public function setGlobals($fieldName, $fieldValue) {
+    public function addGlobal($fieldName, $fieldValue) {
         $this->_globals[$fieldName] = $fieldValue;
+    }
+    
+    public function deleteGlobal($fieldName) {
+        unset($this->_globals[$fieldName]);
+    }
+    
+    
+    public function resetGlobals() {
+        $this->_globals = [];
     }
     
     /**
@@ -546,15 +570,15 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             return [];
         }
         if($layoutName === null){
-            if( $this->parent !== null ) {
-                $layoutName = $this->parentLayoutName(); 
+            if( $this->parentRecord() !== null ) {
+                $layoutName = $this->parentRecord()->LayoutName(); 
             } else {
                 $layoutName = $this->layoutName();
             }
         }
         $valueList = $this->attributeValueLists()[$attribute];
         $layout = static::getDb()->getSchema()->getlayout($layoutName);
-        $recid = $this->parent !== null ? $this->getParent()->getRecid() : $this->getRecId();
+        $recid = $this->parentRecord() !== null ? $this->parentRecord()->getRecid() : $this->getRecId();
         
         return array_flip($layout->getValueListTwoFields($valueList, $byRecId ? $recid : null));
     }
@@ -574,17 +598,6 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
 
 class FileMakerRelatedRecord extends FileMakerActiveRecord 
 {
-    /**
-     * Whether the related record is part of a portal
-     * @var bool 
-     */
-    public $isPortal;
-    
-    /**
-     *
-     * @var FileMakerActiveRecord
-     */
-    public $parent;
     
     /**
      * Name of the relation
@@ -599,15 +612,15 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
     public $tableOccurence;
     
     public function parentLayoutName() {
-        return $this->getParent()->layoutName();
+        return $this->parentRecord()->layoutName();
     }
     
     public function getTableSchemaFromParent($layout = null) {
-        if($this->getParent()->isPortal){
-            return $this->getParent()->getTableSchemaFromParent($layout)->relations[$this->relationName];
+        if($this->parentRecord()->isPortal){
+            return $this->parentRecord()->getTableSchemaFromParent($layout)->relations[$this->relationName];
         }
         else {
-            return $this->getParent()->getTableSchema($layout)->relations[$this->relationName];
+            return $this->parentRecord()->getTableSchema($layout)->relations[$this->relationName];
         }
     }
     
@@ -623,13 +636,6 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
         return $keys;
     }
     
-    /**
-     * 
-     * @return FileMakerActiveRecord
-     */
-    public function getParent() {
-        return $this->parent;
-    }
     
     public function insert($runValidation = true, $attributes = null) { 
         if ($runValidation && !$this->validate($attributes)) {
@@ -637,7 +643,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
         }
         
         if(!$this->isPortal){
-            return $this->getParent()->insert($runValidation, $attributeNames);
+            return $this->parentRecord()->insert($runValidation, $attributeNames);
         }  else {
             $values = $this->getDirtyAttributes();
             foreach ( $values as $field => $value ){
@@ -648,13 +654,13 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
            Yii::beginProfile($token, 'yii\db\Command::query');
            try {
                 $this->_record->commit();
-                Yii::info($this->getParent()->getDb()->getLastRequestedUrl(), __METHOD__);
+                Yii::info($this->parentRecord()->getDb()->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($token, 'yii\db\Command::query');
                 return 1;
            }
            catch ( \Exception $e) {
                 $this->addError('general', $e->getMessage());
-                Yii::info($this->getParent()->getDb()->getLastRequestedUrl(), __METHOD__);
+                Yii::info($this->parentRecord()->getDb()->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($token, 'yii\db\Command::query');
                 return false;
             }
@@ -668,7 +674,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
         }
         
         if(!$this->isPortal){
-            return $this->getParent()->update($runValidation, $attributeNames);
+            return $this->parentRecord()->update($runValidation, $attributeNames);
         } else {
             $values = $this->getDirtyAttributes();
             foreach ( $values as $field => $value ){
