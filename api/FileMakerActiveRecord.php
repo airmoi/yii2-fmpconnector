@@ -401,12 +401,6 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     
     /**
      * 
-     * @param string $relationName
-     * @param \airmoi\FileMaker\Object\Record $record
-     */
-    
-    /**
-     * 
      * @param type $relationName
      * @param type $record
      * @return boolean
@@ -467,28 +461,51 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     }
     
     /**
-     * 
+     * Return the parent record if model represents a related record
      * @return FileMakerActiveRecord
      */
     public function parentRecord() {
         return $this->_parent;
     }
     
+    /**
+     * return the FileMaker RecordID of the model
+     * @return int
+     */
     public function getRecId(){
         return $this->_recid;
     }
     
+    /**
+     * Add a global to be defined on update/create queries
+     * @param string $fieldName
+     * @param string $fieldValue
+     * @return static
+     */
     public function addGlobal($fieldName, $fieldValue) {
         $this->_globals[$fieldName] = $fieldValue;
+        return $this;
     }
     
+    /**
+     * Delete à defined global
+     * @param string $fieldName
+     * @return static
+     */
     public function deleteGlobal($fieldName) {
         unset($this->_globals[$fieldName]);
+        return $this;
     }
     
     
+    
+    /**
+     * Delete all globals sets
+     * @return static
+     */
     public function resetGlobals() {
         $this->_globals = [];
+        return $this;
     }
     
     /**
