@@ -683,6 +683,26 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->andWhere($condition);
         return $this;
     }
+
+    /**
+     * Adds a 'ommit' request .
+     * @param string|array $condition the new WHERE condition. Please refer to [[where()]]
+     * on how to specify this parameter.
+     * @return static the query object itself
+     * @see where()
+     * @see andWhere()
+     */
+    public function exceptFilterWhere($condition, $layout = null)
+    {
+        if( $layout === null ) {
+            $layout = $this->layout;
+        }
+        $this->_currentRequest = $this->db->newFindRequest($layout);
+        $this->_currentRequest->setOmit(true);
+        $this->_requests[] = $this->_currentRequest;
+        $this->andFilterWhere($condition);
+        return $this;
+    }
     
     public function addPreFindScript ($scriptname, $scriptParams = null){
         $this->_scripts['beforeFind'] = [$scriptname, $scriptParams];
