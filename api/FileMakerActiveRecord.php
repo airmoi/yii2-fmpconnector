@@ -359,16 +359,16 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         parent::populateRecord($record, $row);
         
         //Populate relations
-        foreach ( $tableSchema->relations as $relationName => $tableSchema){
+        foreach ( $tableSchema->relations as $relationName => $schema){
             $fields = $fmRecord->getLayout()->listFields();
             $filter = array_filter($fmRecord->getLayout()->listFields(), function($field) use ($relationName) { 
                 return strpos($field, $relationName) !== false;       
             });
-            if( !$tableSchema->isPortal && sizeof($filter)){
-                $record->populateHasOneRelation($relationName, $tableSchema, $fmRecord);
+            if( !$schema->isPortal && sizeof($filter)){
+                $record->populateHasOneRelation($relationName, $schema, $fmRecord);
             }
-            elseif ($fmRecord->getLayout()->hasRelatedSet($relationName)) {
-                $record->populateHasManyRelation($relationName, $tableSchema, $fmRecord);
+            elseif ($fmRecord->getLayout()->hasRelatedSet($schema->name)) {
+                $record->populateHasManyRelation($relationName, $schema, $fmRecord);
             }
         }
 
