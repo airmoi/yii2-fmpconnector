@@ -598,10 +598,25 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             }
         }
         $valueList = $this->attributeValueLists()[$attribute];
+        if(is_array($valueList)) {
+            return $valueList;
+        }
         $layout = static::getDb()->getSchema()->getlayout($layoutName);
         $recid = $this->parentRecord() !== null ? $this->parentRecord()->getRecid() : $this->getRecId();
         
         return array_flip($layout->getValueListTwoFields($valueList, $byRecId ? $recid : null));
+    }
+    
+    public function getFriendlyAttributeValue($attribute ) {
+        if ( !array_key_exists($attribute, $this->attributeValueLists()) ){
+            return $this->$attribute;
+        }
+        $list = $this->valueList($attribute);
+        if(!isset($list[$this->$attribute])){
+            return $this->$attribute;
+        }
+        
+        return $list[$this->$attribute];
     }
     
     
