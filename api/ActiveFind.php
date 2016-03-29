@@ -593,7 +593,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_requests = [$this->_currentRequest];
         foreach($condition as $fieldName => $testvalue) {
-            if(!$testvalue == '') {
+            if(!(strcmp($testvalue, '') === 0)) {
                 if ( $testvalue == null ){
                     $testvalue = '=';
                 }
@@ -614,8 +614,8 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     public function andFilterWhere(array $condition)
     {
         foreach($condition as $fieldName => $testvalue) {
-            if(!$testvalue == '') {
-                if ( $testvalue == null ){
+            if(!(strcmp($testvalue, '') === 0)) {
+                if ( $testvalue === null ){
                     $testvalue = '=';
                 }
                 $this->_currentRequest->addFindCriterion($fieldName, $testvalue);
