@@ -72,6 +72,7 @@ class FmpHelper extends Component {
     public $charset = 'utf-8';
     public $locale = 'en';
     public $prevalidate = false;
+    public $emptyAsNull = false;
     public $curlOptions = [CURLOPT_SSL_VERIFYPEER => false];
     
     /** @var FileMaker */
@@ -97,6 +98,7 @@ class FmpHelper extends Component {
             $this->_fm->setProperty('curlOptions', $this->curlOptions);
             $this->_fm->setProperty('dateFormat', $this->dateFormat);
             $this->_fm->setProperty('useCookieSession', $this->useCookieSession);
+            $this->_fm->setProperty('emptyAsNull', $this->emptyAsNull);
         }
     }
 

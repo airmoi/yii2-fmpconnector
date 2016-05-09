@@ -672,15 +672,22 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @see where()
      * @see andWhere()
      */
-    public function exceptWhere($condition, $layout = null)
+    public function exceptWhere($condition, $layout = null, $keepCurrentRequest = true)
     {
         if( $layout === null ) {
             $layout = $this->layout;
         }
+        
+        $previousRequest = $this->_currentRequest;
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_currentRequest->setOmit(true);
         $this->_requests[] = $this->_currentRequest;
         $this->andWhere($condition);
+        
+        if($keepCurrentRequest){
+            $this->_currentRequest = $previousRequest;
+        }
+        
         return $this;
     }
 
@@ -688,19 +695,30 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * Adds a 'ommit' request .
      * @param string|array $condition the new WHERE condition. Please refer to [[where()]]
      * on how to specify this parameter.
+     * @param string $layout the layout name to use with the created request
+     * @param bool $keepCurrentRequest wether to keep the current request active
+     * 
+     * 
      * @return static the query object itself
      * @see where()
      * @see andWhere()
      */
-    public function exceptFilterWhere($condition, $layout = null)
+    public function exceptFilterWhere($condition, $layout = null, $keepCurrentRequest = true)
     {
         if( $layout === null ) {
             $layout = $this->layout;
         }
+        
+        $previousRequest = $this->_currentRequest;
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_currentRequest->setOmit(true);
         $this->_requests[] = $this->_currentRequest;
         $this->andFilterWhere($condition);
+        
+        if($keepCurrentRequest){
+            $this->_currentRequest = $previousRequest;
+        }
+        
         return $this;
     }
     
