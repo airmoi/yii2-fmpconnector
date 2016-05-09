@@ -86,7 +86,7 @@ class <?= $className ?> extends FileMakerActiveRecord
      */
     public static function layoutName()
     {
-        return self::$defaultLayout;
+        return static::$defaultLayout;
     }
     
     /**
@@ -94,7 +94,7 @@ class <?= $className ?> extends FileMakerActiveRecord
      */
     public static function searchLayoutName()
     {
-        return self::$defaultSearchLayout;
+        return static::$defaultSearchLayout;
     }
 <?php if ($generator->db !== 'db'): ?>
 
