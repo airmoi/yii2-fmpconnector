@@ -100,7 +100,9 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
         }
 
         $models =  $this->query->all();
-        $pagination->totalCount = $this->query->count();
+        if($pagination instanceof \yii\data\Pagination) {
+            $pagination->totalCount = $this->query->count();
+        }
         return $models;
     }
 
