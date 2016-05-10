@@ -305,7 +305,7 @@ class Schema extends \yii\db\Schema
                             $tableSchema->relations[$column->relationName] = $relatedSchema;
                         }
                         else {
-                            $relatedSchema = $table->relations[$column->relationName];
+                            $relatedSchema = $tableSchema->relations[$column->relationName];
                         }
 
                         if ( !isset( $relatedSchema->columns[$column->name]) ) {
