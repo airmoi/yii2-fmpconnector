@@ -38,6 +38,14 @@ class Schema extends \yii\db\Schema
     public $foreignKeyPattern = '/^(zkf|zkp)_([^_]*).*/';
     
     /**
+     * Pattern used to detect if a field is a foreign keys field
+     * second match pattern must return a table trigram (XXX) 
+     * 
+     * @var string 
+     */
+    public $layoutFiltterPattern = '/^PHP_.*/';
+    
+    /**
      * @var array mapping from physical column types (keys) to abstract column types (values)
      */
     public $typeMap = [
@@ -239,7 +247,8 @@ class Schema extends \yii\db\Schema
                 Yii::info($token, __METHOD__);
                 Yii::beginProfile($token, __METHOD__);
                 
-                $layouts = array_filter($this->db->listLayouts());
+                $filter = $this->layoutFiltterPattern;
+                $layouts = array_filter($this->db->listLayouts(), function($v) use($filter) { return preg_match($filter, $v); });
                 Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
             } catch (airmoi\FileMaker\FileMakerException $e){
                 Yii::endProfile($token, __METHOD__);
