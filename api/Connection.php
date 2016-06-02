@@ -77,6 +77,12 @@ class Connection extends \yii\db\Connection
         $this->open();
     }
     
+    
+    public function reset() {
+        $this->_fm = null;
+        $this->open();
+    }
+    
     /**
      * Establishes a DB connection.
      * It does nothing if a DB connection has already been established.
