@@ -69,7 +69,7 @@ use airmoi\FileMaker\FileMaker;
  * @author airmoi <airmoi@gmail.com>
  * @since 2.0
  */
-class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
+class ActiveFind extends \yii\db\ActiveQuery
 {
     public $modelClass;
     
@@ -170,7 +170,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->resultLayout = $modelClass::layoutName();
         $this->db = $modelClass::getDb();
         
-        parent::__construct($config);
+        parent::__construct($modelClass, $config);
         
         /* @var $class FileMakerActiveRecord */
         $this->_cmd =  $this->db->newCompoundFindCommand($this->layout);
@@ -226,7 +226,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     /**
      * Prepare the request for execution
      */
-    public function prepare()
+    public function prepare($builder = null)
     {
         //No prepare when retirving record from its ID
         if($this->_cmd instanceof \airmoi\FileMaker\Command\Find && $this->_cmd->recordId !== null){
@@ -998,5 +998,17 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
             }
         }
         $this->_requests = $newRequests;
+    }
+    
+    public function via($relationName, callable $callable = null){
+        throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported by ' . __CLASS__);
+    }
+    
+    public function findFor($name, $model){
+        throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported by ' . __CLASS__);
+    }
+    
+    public function with(){
+        throw new \yii\base\NotSupportedException(__METHOD__ . ' is not supported by ' . __CLASS__);
     }
 }

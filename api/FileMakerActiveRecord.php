@@ -407,7 +407,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      * 
      * @param type $relationName
      * @param type $record
-     * @return boolean
+     * @return FileMakerRelatedRecord
      */
     public function newRelatedRecord( $relationName, $record = null ) {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
@@ -419,13 +419,14 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         }
         
         $tableSchema = static::getDb()->getTableSchema(static::layoutName())->relations[$relationName];
+        /*@var $tableSchema airmoi\yii2fmconnector\api\TableSchema */
         $model = $modelClass::instantiate([]); 
         
         if($record === null && $this->_record !== null){
             $record = $this->_record->newRelatedRecord($tableSchema->name);
         }
         $model->_record = $record;
-        $model->isPortal = true;
+        $model->isPortal = $tableSchema->isPortal;
         $model->_parent = $this;
         $model->relationName = $relationName;
         $model->tableOccurence = $tableSchema->name;

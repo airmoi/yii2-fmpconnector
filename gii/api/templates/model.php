@@ -127,16 +127,16 @@ class <?= $className ?> extends FileMakerActiveRecord
         ];
     }
 <?php foreach ($relations as $name => $fields): ?>
-<?php
-    //Disable this part until "findFor" is not implemented
+
+
     /**
      * @return <?= ucfirst($name) ?>
      */
-     /*public function get<?= ucfirst($name) ?>()
+     public function get<?= ucfirst($name) ?>()
     {
-        //TODO retrievex related records ?
-    } */
-    ?>
+        return $this->hasOne(<?= ucfirst($name) ?>::className(), ['1' => '1']);
+    } 
+
 <?php endforeach; ?>
 <?php if ($queryClassName): ?>
 <?php

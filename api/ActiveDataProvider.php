@@ -39,7 +39,7 @@ use airmoi\FileMaker\Command\Find;
  * @author airmoi <airmoi@gmail.com>
  * @since 2.0
  */
-class ActiveDataProvider extends \yii\data\BaseDataProvider
+class ActiveDataProvider extends \yii\data\ActiveDataProvider
 {
     /**
      * @var ActiveFind the query that is used to fetch data models and [[totalCount]]
@@ -164,10 +164,11 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
      */
     public function setSort($value)
     {
-        parent::setSort($value);
+        \yii\data\BaseDataProvider::setSort($value);
         if (($sort = $this->getSort()) !== false && $this->query instanceof ActiveFind) {
-            /* @var $model Model */
             $model = new $this->query->modelClass;
+            /* @var $model FileMakerActiveRecord */
+
             if (empty($sort->attributes)) {
                 foreach ($model->attributes() as $attribute) {
                     $sort->attributes[$attribute] = [
@@ -175,6 +176,22 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
                         'desc' => [$attribute => SORT_DESC],
                         'label' => $model->getAttributeLabel($attribute),
                     ];
+                }
+                 $tableSchema = $model->getTableSchema();
+            
+                foreach ( $tableSchema->relations as $relationName => $schema){
+                    /*@var $schema airmoi\yii2fmconnector\api\TableSchema */
+                    if($schema->isPortal)
+                        continue;
+                    
+                    $relatedRecord = $model->newRelatedRecord($relationName);
+                    foreach($schema->columns as $column) {
+                        $sort->attributes[$relationName . '.' . $column->name] = [
+                            'asc' => [$relationName . '::' . $column->name => SORT_ASC],
+                            'desc' => [$relationName . '::' . $column->name => SORT_DESC],
+                            'label' => $relatedRecord->getAttributeLabel($column->name),
+                        ];
+                    }
                 }
             } else {
                 foreach ($sort->attributes as $attribute => $config) {
