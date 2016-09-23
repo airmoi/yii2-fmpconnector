@@ -105,6 +105,13 @@ class FmpHelper extends Component {
     private function endConnection() { 
     }
     
+    /**
+     * Perform the named script and store the result
+     * you may get result using getScriptResult method
+     * @param string $scriptName
+     * @param array $params
+     * @return boolean
+     */
     public function performScript($scriptName, array $params){
         try {
             $this->initConnection();
