@@ -63,6 +63,12 @@ class Schema extends \yii\db\Schema
      * @var \airmoi\FileMaker\Object\Layout[]
      */
     private $_layout = [];
+    
+    /**
+     *
+     * @var string[]
+     */
+    private $_layoutList = null;
 
     /**
      * Loads the metadata for the specified table.
@@ -94,8 +100,10 @@ class Schema extends \yii\db\Schema
             try {
                 Yii::info($token, __METHOD__);
                 Yii::beginProfile($token, __METHOD__);
+                
                 $this->_layout[$layoutName] = $this->db->getLayout($layoutName);
                 $this->_layout[$layoutName]->loadExtendedInfo();
+                
                 Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
             } catch (airmoi\FileMaker\FileMakerException $e){
                 Yii::endProfile($token, __METHOD__);
@@ -120,7 +128,8 @@ class Schema extends \yii\db\Schema
     }
     
     public function findLayoutsFromSameTable(TableSchema $table) {
-        foreach( $this->findTableNames() as $layoutName ) {
+        $layouts = $this->findTableNames();
+        foreach( $layouts as $layoutName ) {
             if($layoutName == $table->name || $layoutName == ''){
                 continue;
             }
@@ -243,17 +252,20 @@ class Schema extends \yii\db\Schema
     protected function findTableNames($schema = '')
     {
         $token = 'Getting layout\'s list';
-            try {
-                Yii::info($token, __METHOD__);
-                Yii::beginProfile($token, __METHOD__);
-                
-                $filter = $this->layoutFiltterPattern;
-                $layouts = array_filter($this->db->listLayouts(), function($v) use($filter) { return preg_match($filter, $v); });
-                Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
-            } catch (airmoi\FileMaker\FileMakerException $e){
-                Yii::endProfile($token, __METHOD__);
-                throw new Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
-            }
+        if(sizeof($this->_layoutList) > 0) {
+            return $this->_layoutList;
+        }
+        try {
+            Yii::info($token, __METHOD__);
+            Yii::beginProfile($token, __METHOD__);
+
+            $filter = $this->layoutFiltterPattern;
+            $this->_layoutList = array_filter($this->db->listLayouts(), function($v) use($filter) { return preg_match($filter, $v); });
+            Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
+        } catch (airmoi\FileMaker\FileMakerException $e){
+            Yii::endProfile($token, __METHOD__);
+            throw new Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
+        }
         return $layouts;
     }
 
