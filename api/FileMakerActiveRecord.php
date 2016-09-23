@@ -385,7 +385,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
         
         if(!class_exists($modelClass)){
-            \Yii::error($modelClass . ' does not exists' , 'FileMaker.fmConnector');
+            \Yii::error("relation's model class $modelClass is missing", 'FileMaker.fmConnector');
             return;
         }
         $model = $modelClass::instantiate([]);
@@ -414,8 +414,8 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         
         
         if(!class_exists($modelClass)){
-            \Yii::error($modelClass . ' does not exists' , 'FileMaker.fmConnector');
-            throw new yii\base\InvalidParamException("relation's model class $modelClass is missing");
+            \Yii::error("relation's model class $modelClass is missing", 'FileMaker.fmConnector');
+            return;
         }
         
         $tableSchema = static::getDb()->getTableSchema(static::layoutName())->relations[$relationName];
