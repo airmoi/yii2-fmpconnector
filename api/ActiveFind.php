@@ -585,7 +585,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @see where()
      * @see orWhere()
      */
-    public function filterWhere(array $condition)
+    public function filterWhere(array $condition, $layout = null)
     {
         if( $layout === null ) {
             $layout = $this->layout;
