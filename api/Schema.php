@@ -266,7 +266,7 @@ class Schema extends \yii\db\Schema
             Yii::endProfile($token, __METHOD__);
             throw new Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
         }
-        return $layouts;
+        return $this->_layoutList;
     }
 
     /**
