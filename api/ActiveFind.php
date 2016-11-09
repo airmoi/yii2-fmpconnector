@@ -454,7 +454,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * Executes query and returns a single row of result.
      * @param Connection $db the DB connection used to create the DB command.
      * If null, the DB connection returned by [[modelClass]] will be used.
-     * @return ActiveRecord|array|null a single row of query result. Depending on the setting of [[asArray]],
+     * @return \yii\db\ActiveRecord|array|null a single row of query result. Depending on the setting of [[asArray]],
      * the query result may be either an array or an ActiveRecord object. Null will be returned
      * if the query results in nothing.
      */
@@ -722,16 +722,42 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         return $this;
     }
     
+    /**
+     * Sets a ScriptMaker script to be run before performing the query.
+     * 
+     * @param string $scriptname
+     * @param string $scriptParams
+     * @return \airmoi\yii2fmconnector\api\ActiveFind
+     */
     public function addPreFindScript ($scriptname, $scriptParams = null){
         $this->_scripts['beforeFind'] = [$scriptname, $scriptParams];
+        return $this;
     }
     
+    /**
+     * Sets a ScriptMaker script to be run after performing a the query, 
+     * but before sorting the result set.
+     * 
+     * @param string $scriptname
+     * @param string $scriptParams
+     * @return \airmoi\yii2fmconnector\api\ActiveFind
+     */
     public function addPreSortScript ($scriptname, $scriptParams = null){
         $this->_scripts['beforeSort'] = [$scriptname, $scriptParams];
+        return $this;
     }
     
+    /**
+     * Sets a ScriptMaker script to be run after the query result set is 
+     * generated and sorted.
+     * 
+     * @param string $scriptname
+     * @param string $scriptParams
+     * @return \airmoi\yii2fmconnector\api\ActiveFind
+     */
     public function addAfterFindScript ($scriptname, $scriptParams = null){
         $this->_scripts['afterFind'] = [$scriptname, $scriptParams];
+        return $this;
     }
     
     /**
@@ -913,7 +939,14 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         $this->_cmd = $this->db->newFindCommand($this->layout);
         $this->_cmd->setRecordId($id);
         $this->_cmd->setResultLayout($this->resultLayout);
-        return $this->one();
+        $record = $this->one();
+        
+        //Bufix : Check if recordId === id (Filemaker returns all record if recordId don't exists in DB!!!)
+        if( !$record instanceof FileMakerActiveRecord || (int)$record->_recid !== (int)$id){
+            return null;
+        }
+        return $record;
+        
     }
     
     /**
