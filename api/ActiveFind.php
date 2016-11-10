@@ -936,17 +936,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @return FileMakerActiveRecord
      */
     public function getRecordById($id){
-        $this->_cmd = $this->db->newFindCommand($this->layout);
+        $this->_cmd = $this->db->newFindCommand($this->resultLayout);
         $this->_cmd->setRecordId($id);
-        $this->_cmd->setResultLayout($this->resultLayout);
-        $record = $this->one();
-        
-        //Bufix : Check if recordId === id (Filemaker returns all record if recordId don't exists in DB!!!)
-        if( !$record instanceof FileMakerActiveRecord || (int)$record->_recid !== (int)$id){
-            return null;
-        }
-        return $record;
-        
+        return $record = $this->one();
     }
     
     /**
