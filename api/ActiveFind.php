@@ -71,6 +71,8 @@ use airmoi\FileMaker\FileMaker;
  */
 class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
 {
+    use ActiveRelationTrait;
+
     public $modelClass;
     
     /**
@@ -102,17 +104,14 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * will be converted into strings without any change.
      */
     public $orderBy = [];
-    /**
-     * @var array scripts to be executed before / after find and before sort
-     *  
-     */
-    private $_scripts = [];
+
     /**
      * @var string|callable $column the name of the column by which the query results should be indexed by.
      * This can also be a callable (e.g. anonymous function) that returns the index value based on the given
      * row data. For more details, see [[indexBy()]]. This property is only used by [[QueryInterface::all()|all()]].
      */
     public $indexBy;
+
     /**
      * @var integer maximum number of records to be returned. If not set or less than 0, it means no limit.
      */
@@ -122,6 +121,38 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * less than 0, it means starting from the beginning.
      */
     public $offset;
+
+    /**
+     * @var boolean whether to emulate the actual query execution, returning empty or false results.
+     * @see emulateExecution()
+     * @since 2.0.11
+     */
+    public $emulateExecution = false;
+    
+    /**
+     * @var boolean whether to return each record as an array. If false (default), an object
+     * of [[modelClass]] will be created to represent each record.
+     */
+    public $asArray;
+
+    public $_recordId;
+    
+    /**
+     * Conditions that will be applied to all requets
+     * @var array 
+     */
+    public $filterAll = [];
+    /**
+     *
+     * @var \airmoi\FileMaker\Object\Result 
+     */
+    private $_result;
+
+    /**
+     * @var array scripts to be executed before / after find and before sort
+     *
+     */
+    private $_scripts = [];
     /**
      * @var \airmoi\FileMaker\Command\CompoundFind|\airmoi\FileMaker\Command\PerformScript
      */
@@ -134,29 +165,11 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @var \airmoi\FileMaker\Command\FindRequest the current request being filled
      */
     private $_currentRequest;
-    
+
     private $_count;
-    
-    /**
-     * @var boolean whether to return each record as an array. If false (default), an object
-     * of [[modelClass]] will be created to represent each record.
-     */
-    public $asArray;
-    
-    /**
-     * Conditions that will be applied to all requets
-     * @var array 
-     */
-    public $filterAll = [];
-    /**
-     *
-     * @var \airmoi\FileMaker\Object\Result 
-     */
-    private $_result;
-    
-    public $_recordId;
-    
-    
+
+
+
 
     /**
      * Constructor.
@@ -198,6 +211,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     public function all($db = null)
     {
+        if ($this->emulateExecution) {
+            return [];
+        }
         try {
             $result = $this->execute();
             $rows = $result->getRecords();
@@ -460,6 +476,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     public function one($db = null)
     {
+        if ($this->emulateExecution) {
+            return [];
+        }
         try {
             $result = $this->execute();
             if($result->getFetchCount() == 0){
@@ -880,6 +899,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @return integer number of records
      */
     public function count($q = '*', $db = NULL) {
+        if ($this->emulateExecution) {
+            return 0;
+        }
         $this->execute();
         return $this->_count;
     }
@@ -891,6 +913,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @return boolean whether the query result contains any row of data.
      */
     public function exists($db = null) {
+        if ($this->emulateExecution) {
+            return false;
+        }
         $this->execute();
         return $this->_count > 0;
     }/**
@@ -1023,5 +1048,21 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
             }
         }
         $this->_requests = $newRequests;
+    }
+
+    /**
+     * Sets whether to emulate query execution, preventing any interaction with data storage.
+     * After this mode is enabled, methods, returning query results like [[one()]], [[all()]], [[exists()]]
+     * and so on, will return empty or false values.
+     * You should use this method in case your program logic indicates query should not return any results, like
+     * in case you set false where condition like `0=1`.
+     * @param boolean $value whether to prevent query execution.
+     * @return $this the query object itself.
+     * @since 2.0.11
+     */
+    public function emulateExecution($value = true)
+    {
+        $this->emulateExecution = $value;
+        return $this;
     }
 }
