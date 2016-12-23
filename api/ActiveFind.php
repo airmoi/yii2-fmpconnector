@@ -75,8 +75,6 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
 {
     use ActiveQueryTrait;
     use ActiveRelationTrait;
-
-    public $modelClass;
     
     /**
      * Layout's name on which the query is based
@@ -131,12 +129,6 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * @since 2.0.11
      */
     public $emulateExecution = false;
-    
-    /**
-     * @var boolean whether to return each record as an array. If false (default), an object
-     * of [[modelClass]] will be created to represent each record.
-     */
-    public $asArray;
 
     public $_recordId;
     
