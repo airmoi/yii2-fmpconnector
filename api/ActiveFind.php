@@ -10,6 +10,8 @@ namespace airmoi\yii2fmconnector\api;
 use Yii;
 use yii\base\InvalidConfigException;
 use airmoi\FileMaker\FileMaker;
+use yii\db\ActiveQueryInterface;
+use yii\db\ActiveQueryTrait;
 
 /**
  * ActiveQuery represents a DB query associated with an Active Record class.
@@ -69,8 +71,9 @@ use airmoi\FileMaker\FileMaker;
  * @author airmoi <airmoi@gmail.com>
  * @since 2.0
  */
-class ActiveFind extends \yii\base\Object implements \yii\db\ActiveQueryInterface
+class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
 {
+    use ActiveQueryTrait;
     use ActiveRelationTrait;
 
     public $modelClass;
@@ -227,17 +230,6 @@ class ActiveFind extends \yii\base\Object implements \yii\db\ActiveQueryInterfac
         
         return $this->populate($rows);
     }
-    
-    /**
-     * Sets the [[asArray]] property.
-     * @param boolean $value whether to return the query results in terms of arrays instead of Active Records.
-     * @return static the query object itself
-     */
-    public function asArray($value = true)
-    {
-        $this->asArray = $value;
-        return $this;
-    }
 
     /**
      * Prepare the request for execution
@@ -356,7 +348,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\ActiveQueryInterfac
      * @param \airmoi\FileMaker\Object\Record[] $records
      * @return array|FileMakerActiveRecord[]
      */
-    private function createModels($records)
+    protected function createModels($records)
     {
         $models = [];
         if ($this->asArray) {
@@ -377,7 +369,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\ActiveQueryInterfac
                 
                 //Store related sets
                 foreach($record->getLayout()->getRelatedSets() as $relatedSetName => $relatedset) { 
-                    foreach ( $relatedSet as $i => $record) {
+                    foreach ( $relatedset as $i => $record) {
                         $row[$relatedSetName][$i] = ['_recid' => $record->getRecordId()];
                         foreach($record->getFields() as $field){
                             $row[$relatedSetName][$i][$field] = $relatedset->getField($field);
@@ -1064,13 +1056,5 @@ class ActiveFind extends \yii\base\Object implements \yii\db\ActiveQueryInterfac
     {
         $this->emulateExecution = $value;
         return $this;
-    }
-
-
-    /**
-     * @inheritdoc
-     */
-    public function with() {
-        throw new yii\base\NotSupportedException("With is not supported yet by yii2-fmconnector");
     }
 }
