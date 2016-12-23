@@ -11,7 +11,7 @@ use yii\helpers\ArrayHelper;
  *
  * @author romain
  */
-class FileMakerActiveRecord extends \yii\db\BaseActiveRecord 
+class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
 {
     /**
     * @var string the default layout used to retrieve records

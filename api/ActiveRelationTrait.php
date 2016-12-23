@@ -470,6 +470,11 @@ trait ActiveRelationTrait
             if (empty($values)) {
                 $this->emulateExecution();
             }
+
+            $attributeName = reset($attributes);
+            foreach($values as $value){
+                $this->orWhere([$attributeName => $value]);
+            }
         } else {
             // composite keys
 
