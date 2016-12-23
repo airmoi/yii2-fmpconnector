@@ -7,7 +7,10 @@ namespace airmoi\yii2fmconnector\api;
 
 use yii\base\InvalidConfigException;
 use yii\base\InvalidParamException;
+use yii\db\ActiveQueryInterface;
+use yii\db\ActiveQueryTrait;
 use yii\db\ActiveRecordInterface;
+use yii\db\BaseActiveRecord;
 
 /**
  * ActiveRelationTrait implements the common methods and properties for active record relational queries.
@@ -31,7 +34,7 @@ trait ActiveRelationTrait
      */
     public $multiple;
     /**
-     * @var ActiveRecord the primary model of a relational query.
+     * @var FileMakerActiveRecord the primary model of a relational query.
      * This is used only in lazy loading with dynamic query options.
      */
     public $primaryModel;
@@ -297,7 +300,7 @@ trait ActiveRelationTrait
             return;
         }
         $model = reset($models);
-        /* @var $relation ActiveQueryInterface|ActiveQuery */
+        /* @var $relation ActiveQueryInterface|ActiveFind */
         $relation = $model instanceof ActiveRecordInterface ? $model->getRelation($name) : (new $this->modelClass)->getRelation($name);
 
         if ($relation->multiple) {
@@ -420,9 +423,9 @@ trait ActiveRelationTrait
      */
     private function prefixKeyColumns($attributes)
     {
-        if ($this instanceof ActiveQuery && (!empty($this->join) || !empty($this->joinWith))) {
+        if ($this instanceof ActiveFind && (!empty($this->join) || !empty($this->joinWith))) {
             if (empty($this->from)) {
-                /* @var $modelClass ActiveRecord */
+                /* @var $modelClass ActiveFind */
                 $modelClass = $this->modelClass;
                 $alias = $modelClass::tableName();
             } else {
@@ -531,7 +534,7 @@ trait ActiveRelationTrait
             return [];
         }
         $this->filterByModels($primaryModels);
-        /* @var $primaryModel ActiveRecord */
+        /* @var $primaryModel FileMakerActiveRecord */
         $primaryModel = reset($primaryModels);
         if (!$primaryModel instanceof ActiveRecordInterface) {
             // when primaryModels are array of arrays (asArray case)
