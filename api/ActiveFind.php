@@ -69,7 +69,7 @@ use airmoi\FileMaker\FileMaker;
  * @author airmoi <airmoi@gmail.com>
  * @since 2.0
  */
-class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
+class ActiveFind extends \yii\base\Object implements \yii\db\ActiveQueryInterface
 {
     use ActiveRelationTrait;
 
@@ -1064,5 +1064,13 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
     {
         $this->emulateExecution = $value;
         return $this;
+    }
+
+
+    /**
+     * @inheritdoc
+     */
+    public function with() {
+        throw new yii\base\NotSupportedException("With is not supported yet by yii2-fmconnector");
     }
 }
