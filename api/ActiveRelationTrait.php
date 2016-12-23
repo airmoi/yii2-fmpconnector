@@ -7,6 +7,7 @@ namespace airmoi\yii2fmconnector\api;
 
 use yii\base\InvalidConfigException;
 use yii\base\InvalidParamException;
+use yii\db\ActiveRecordInterface;
 
 /**
  * ActiveRelationTrait implements the common methods and properties for active record relational queries.
