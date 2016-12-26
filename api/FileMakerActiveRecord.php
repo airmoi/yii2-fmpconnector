@@ -100,7 +100,27 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     {
         return array_keys($this->getDb()->getTableSchema($this->layoutName())->columns);
     }
-    
+
+    /**
+     * Extend afterFind to trigger afterFind in related Records
+     *
+     * @inheritdoc
+     */
+    public function afterFind()
+    {
+        parent::afterFind();
+        foreach ($this->getRelatedRecords() as $relation) {
+            if(is_array($relation)) {
+                foreach ($relation as $record) {
+                    $record->afterFind();
+                }
+            } else {
+                $relation->afterFind();
+            }
+        }
+    }
+
+
     public function getAttributeLabel($attribute) {
         if(preg_match('/^(\w+)\[(\d+)\]/', $attribute, $matches)){
             $attribute = $matches[1];
