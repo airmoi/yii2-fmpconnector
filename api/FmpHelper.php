@@ -67,7 +67,7 @@ class FmpHelper extends Component {
     public $db = '';
     public $username = '';
     public $password = '';
-    public $useCookieSession = true;
+    public $useCookieSession = false;
     public $dateFormat;
     public $charset = 'utf-8';
     public $locale = 'en';

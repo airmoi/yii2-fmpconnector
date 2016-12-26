@@ -10,6 +10,8 @@ namespace airmoi\yii2fmconnector\api;
 use Yii;
 use yii\base\InvalidConfigException;
 use airmoi\FileMaker\FileMaker;
+use yii\db\ActiveQueryInterface;
+use yii\db\ActiveQueryTrait;
 
 /**
  * ActiveQuery represents a DB query associated with an Active Record class.
@@ -69,9 +71,10 @@ use airmoi\FileMaker\FileMaker;
  * @author airmoi <airmoi@gmail.com>
  * @since 2.0
  */
-class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
+class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
 {
-    public $modelClass;
+    use ActiveQueryTrait;
+    use ActiveRelationTrait;
     
     /**
      * Layout's name on which the query is based
@@ -102,17 +105,14 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * will be converted into strings without any change.
      */
     public $orderBy = [];
-    /**
-     * @var array scripts to be executed before / after find and before sort
-     *  
-     */
-    private $_scripts = [];
+
     /**
      * @var string|callable $column the name of the column by which the query results should be indexed by.
      * This can also be a callable (e.g. anonymous function) that returns the index value based on the given
      * row data. For more details, see [[indexBy()]]. This property is only used by [[QueryInterface::all()|all()]].
      */
     public $indexBy;
+
     /**
      * @var integer maximum number of records to be returned. If not set or less than 0, it means no limit.
      */
@@ -122,6 +122,32 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * less than 0, it means starting from the beginning.
      */
     public $offset;
+
+    /**
+     * @var boolean whether to emulate the actual query execution, returning empty or false results.
+     * @see emulateExecution()
+     * @since 2.0.11
+     */
+    public $emulateExecution = false;
+
+    public $_recordId;
+    
+    /**
+     * Conditions that will be applied to all requets
+     * @var array 
+     */
+    public $filterAll = [];
+    /**
+     *
+     * @var \airmoi\FileMaker\Object\Result 
+     */
+    private $_result;
+
+    /**
+     * @var array scripts to be executed before / after find and before sort
+     *
+     */
+    private $_scripts = [];
     /**
      * @var \airmoi\FileMaker\Command\CompoundFind|\airmoi\FileMaker\Command\PerformScript
      */
@@ -134,29 +160,11 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @var \airmoi\FileMaker\Command\FindRequest the current request being filled
      */
     private $_currentRequest;
-    
+
     private $_count;
-    
-    /**
-     * @var boolean whether to return each record as an array. If false (default), an object
-     * of [[modelClass]] will be created to represent each record.
-     */
-    public $asArray;
-    
-    /**
-     * Conditions that will be applied to all requets
-     * @var array 
-     */
-    public $filterAll = [];
-    /**
-     *
-     * @var \airmoi\FileMaker\Object\Result 
-     */
-    private $_result;
-    
-    public $_recordId;
-    
-    
+
+
+
 
     /**
      * Constructor.
@@ -198,6 +206,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      */
     public function all($db = null)
     {
+        if ($this->emulateExecution) {
+            return [];
+        }
         try {
             $result = $this->execute();
             $rows = $result->getRecords();
@@ -210,17 +221,6 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         }
         
         return $this->populate($rows);
-    }
-    
-    /**
-     * Sets the [[asArray]] property.
-     * @param boolean $value whether to return the query results in terms of arrays instead of Active Records.
-     * @return static the query object itself
-     */
-    public function asArray($value = true)
-    {
-        $this->asArray = $value;
-        return $this;
     }
 
     /**
@@ -325,6 +325,14 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
         if ($this->indexBy === null) {
             $models = $this->removeDuplicatedModels($models);
         }
+
+        if (!empty($this->with)) {
+            $this->findWith($this->with, $models);
+        }
+
+        if ($this->inverseOf !== null) {
+            $this->addInverseRelations($models);
+        }
         
         if (!$this->asArray) {
             foreach ($models as $model) {
@@ -340,7 +348,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @param \airmoi\FileMaker\Object\Record[] $records
      * @return array|FileMakerActiveRecord[]
      */
-    private function createModels($records)
+    protected function createModels($records)
     {
         $models = [];
         if ($this->asArray) {
@@ -361,7 +369,7 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
                 
                 //Store related sets
                 foreach($record->getLayout()->getRelatedSets() as $relatedSetName => $relatedset) { 
-                    foreach ( $relatedSet as $i => $record) {
+                    foreach ( $relatedset as $i => $record) {
                         $row[$relatedSetName][$i] = ['_recid' => $record->getRecordId()];
                         foreach($record->getFields() as $field){
                             $row[$relatedSetName][$i][$field] = $relatedset->getField($field);
@@ -454,12 +462,15 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * Executes query and returns a single row of result.
      * @param Connection $db the DB connection used to create the DB command.
      * If null, the DB connection returned by [[modelClass]] will be used.
-     * @return ActiveRecord|array|null a single row of query result. Depending on the setting of [[asArray]],
+     * @return \yii\db\ActiveRecord|array|null a single row of query result. Depending on the setting of [[asArray]],
      * the query result may be either an array or an ActiveRecord object. Null will be returned
      * if the query results in nothing.
      */
     public function one($db = null)
     {
+        if ($this->emulateExecution) {
+            return [];
+        }
         try {
             $result = $this->execute();
             if($result->getFetchCount() == 0){
@@ -880,6 +891,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @return integer number of records
      */
     public function count($q = '*', $db = NULL) {
+        if ($this->emulateExecution) {
+            return 0;
+        }
         $this->execute();
         return $this->_count;
     }
@@ -891,6 +905,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @return boolean whether the query result contains any row of data.
      */
     public function exists($db = null) {
+        if ($this->emulateExecution) {
+            return false;
+        }
         $this->execute();
         return $this->_count > 0;
     }/**
@@ -936,10 +953,9 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
      * @return FileMakerActiveRecord
      */
     public function getRecordById($id){
-        $this->_cmd = $this->db->newFindCommand($this->layout);
+        $this->_cmd = $this->db->newFindCommand($this->resultLayout);
         $this->_cmd->setRecordId($id);
-        $this->_cmd->setResultLayout($this->resultLayout);
-        return $this->one();
+        return $record = $this->one();
     }
     
     /**
@@ -1024,5 +1040,21 @@ class ActiveFind extends \yii\base\Object implements \yii\db\QueryInterface
             }
         }
         $this->_requests = $newRequests;
+    }
+
+    /**
+     * Sets whether to emulate query execution, preventing any interaction with data storage.
+     * After this mode is enabled, methods, returning query results like [[one()]], [[all()]], [[exists()]]
+     * and so on, will return empty or false values.
+     * You should use this method in case your program logic indicates query should not return any results, like
+     * in case you set false where condition like `0=1`.
+     * @param boolean $value whether to prevent query execution.
+     * @return $this the query object itself.
+     * @since 2.0.11
+     */
+    public function emulateExecution($value = true)
+    {
+        $this->emulateExecution = $value;
+        return $this;
     }
 }
