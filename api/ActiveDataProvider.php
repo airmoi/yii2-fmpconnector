@@ -14,13 +14,10 @@ use airmoi\yii2fmconnector\api\Connection;
 use yii\db\QueryInterface;
 use yii\di\Instance;
 
-use airmoi\FileMaker\FileMaker;
-use airmoi\FileMaker\Command\Find;
-
 /**
- * ActiveDataProvider implements a data provider based on [[airmoi\FileMaker\Command\Find]] and [[]].
+ * ActiveDataProvider implements a data provider based on [[airmoi\FileMaker\Command\Find]].
  *
- * ActiveDataProvider provides data by performing DB queries using [[FileMaker]].
+ * ActiveDataProvider provides data by performing DB queries using [[airmoi\FileMaker\FileMaker]].
  *
  * The following is an example of using ActiveDataProvider to provide ActiveRecord instances:
  *
@@ -89,7 +86,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
         
         if (($pagination = $this->getPagination()) !== false) {
             //Dirty hack : force page n° as totalcount is already returned by FileMaker PHP-API
-            $pagination->setPage(Yii::$app->getRequest()->getQueryParam($pagination->pageParam, 1 )-1, false);
+            $pagination->setPage(Yii::$app->getRequest()->getQueryParam($pagination->pageParam, 1)-1, false);
             $this->query->limit($pagination->getLimit())->offset($pagination->getOffset());
         }
         if (($sort = $this->getSort()) !== false) {
@@ -100,7 +97,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
         }
 
         $models =  $this->query->all();
-        if($pagination instanceof \yii\data\Pagination) {
+        if ($pagination instanceof \yii\data\Pagination) {
             $pagination->totalCount = $this->query->count();
         }
         return $models;
