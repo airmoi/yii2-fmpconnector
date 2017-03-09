@@ -119,18 +119,20 @@ class FmpHelper extends Component {
             foreach ($params as $name => $value){
                $scriptParameters .= "<".$name.">".$value."</".$name.">";
             }
-            Yii::trace("Performing script $scriptName with params $scriptParameters", __NAMESPACE__ . __CLASS__);
+
+            Yii::beginProfile("Perform script '$scriptName' with params '$scriptParameters'", 'yii\db\Command::query');
             $t0 = microtime(true);
             $cmd = $this->_fm->newPerformScriptCommand($this->resultLayout, $scriptName, $scriptParameters);        
             $result = $cmd->execute();
-       
-            Yii::trace("Script performed successfully in " . (microtime(true)-$t0), __NAMESPACE__ . __CLASS__);
+
+            Yii::endProfile("Perform script '$scriptName' with params '$scriptParameters'", 'yii\db\Command::query');
             $record = $result->getFirstRecord();
             $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
             $this->endConnection();
             return true;
         }
         catch ( FileMakerException $e ) {
+            Yii::endProfile("Perform script '$scriptName' with params '$scriptParameters'", 'yii\db\Command::query');
             Yii::error("Script error : ". $e->getCode() . ' ' . $e->getMessage(), __NAMESPACE__ . __CLASS__);
             $this->_scriptResult = '<'.$this->errorTag.'>'.$e->getCode().'</'.$this->errorTag.'><'.$this->errorDescriptionTag.'>'.$e->getMessage().'</'.$this->errorDescriptionTag.'>';
             return false;
