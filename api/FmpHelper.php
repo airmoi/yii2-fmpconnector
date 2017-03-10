@@ -126,7 +126,6 @@ class FmpHelper extends Component
             }
 
             Yii::beginProfile("Perform script '$scriptName' with params '$scriptParameters'", 'yii\db\Command::query');
-            $t0 = microtime(true);
             $cmd = $this->_fm->newPerformScriptCommand($this->resultLayout, $scriptName, $scriptParameters);
             $result = $cmd->execute();
 

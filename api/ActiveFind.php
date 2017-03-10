@@ -7,6 +7,9 @@
 
 namespace airmoi\yii2fmconnector\api;
 
+use airmoi\FileMaker\Command\CompoundFind;
+use airmoi\FileMaker\Command\Find;
+use airmoi\FileMaker\Command\PerformScript;
 use Yii;
 use yii\base\InvalidConfigException;
 use airmoi\FileMaker\FileMaker;
@@ -200,7 +203,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * Executes query and returns all results as an array.
      * @param Connection $db the DB connection used to create the DB command.
      * If null, the DB connection returned by [[modelClass]] will be used.
-     * @return ActiveRecord[]|array the query results. If the query results in nothing, an empty array will be returned.
+     * @return FileMakerActiveRecord[]|array the query results. If the query results in nothing, an empty array will be returned.
      * @throws \Exception
      */
     public function all($db = null)
@@ -227,11 +230,11 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     public function prepare()
     {
         //No prepare when retirving record from its ID
-        if ($this->_cmd instanceof \airmoi\FileMaker\Command\Find && $this->_cmd->recordId !== null) {
+        if ($this->_cmd instanceof Find && $this->_cmd->recordId !== null) {
             return;
         }
 
-        if (!$this->_cmd instanceof \airmoi\FileMaker\Command\PerformScript) {
+        if (!$this->_cmd instanceof PerformScript) {
             $this->applyFilterAll();
 
             //Add requests
@@ -244,8 +247,9 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
             }
 
             //Tranform query to findall query if no find request set (empty CompoundFind are to supported by cwp)
-            if (!sizeof($this->_requests) && $this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind) {
+            if (!sizeof($this->_requests) && $this->_cmd instanceof CompoundFind) {
                 $this->_cmd = $this->db->newFindAllCommand($this->layout);
+                Yii::warning("Query transformed to findAll (no request defined)", 'yii\db\Command::query');
             }
 
             //Add sort rules
@@ -458,7 +462,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * Executes query and returns a single row of result.
      * @param Connection $db the DB connection used to create the DB command.
      * If null, the DB connection returned by [[modelClass]] will be used.
-     * @return array|null|\yii\db\ActiveRecord a single row of query result. Depending on the setting of [[asArray]],
+     * @return array|null|FileMakerActiveRecord a single row of query result. Depending on the setting of [[asArray]],
      * the query result may be either an array or an ActiveRecord object. Null will be returned
      * if the query results in nothing.
      * @throws \Exception
@@ -944,10 +948,20 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     {
         $command = ['layout' => $this->layout];
         $command['method'] = get_class($this->_cmd);
-        if ($this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind) {
+        if ($this->_cmd instanceof CompoundFind) {
             $command['requests'] = [];
             foreach ($this->_requests as $request) {
                 $command['requests'][] = $request->findCriteria;
+            }
+        } elseif ($this->_cmd instanceof Find) {
+            $command['requests'] = ["_recId" => $this->_cmd->recordId];
+        } elseif ($this->_cmd instanceof PerformScript) {
+           //Not implemented yet : missing access to PerformFind Params
+        }
+        if (sizeof($this->_scripts)) {
+            $command['scripts'] = [];
+            foreach ($this->_scripts as $position => $scriptOptions) {
+                $command['scripts'][$position] = $scriptOptions;
             }
         }
         $command['offset'] = $this->offset;
