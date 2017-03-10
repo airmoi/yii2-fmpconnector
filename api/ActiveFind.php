@@ -7,6 +7,9 @@
 
 namespace airmoi\yii2fmconnector\api;
 
+use airmoi\FileMaker\Command\CompoundFind;
+use airmoi\FileMaker\Command\Find;
+use airmoi\FileMaker\Command\PerformScript;
 use Yii;
 use yii\base\InvalidConfigException;
 use airmoi\FileMaker\FileMaker;
@@ -75,25 +78,25 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
 {
     use ActiveQueryTrait;
     use ActiveRelationTrait;
-    
+
     /**
      * Layout's name on which the query is based
-     * @var string 
+     * @var string
      */
     public $layout;
-    
+
     /**
      * Layout's name on which the query is based
-     * @var string 
+     * @var string
      */
     public $resultLayout;
-    
+
     public $relatedSetFilter = 'none';
     public $relatedSetMax = null;
-    
+
     /**
      *
-     * @var Connection 
+     * @var Connection
      */
     public $db;
     /**
@@ -131,15 +134,15 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     public $emulateExecution = false;
 
     public $_recordId;
-    
+
     /**
      * Conditions that will be applied to all requets
-     * @var array 
+     * @var array
      */
     public $filterAll = [];
     /**
      *
-     * @var \airmoi\FileMaker\Object\Result 
+     * @var \airmoi\FileMaker\Object\Result
      */
     private $_result;
 
@@ -164,8 +167,6 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     private $_count;
 
 
-
-
     /**
      * Constructor.
      * @param string $modelClass the model class associated with this query
@@ -177,11 +178,11 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         $this->layout = $modelClass::searchLayoutName();
         $this->resultLayout = $modelClass::layoutName();
         $this->db = $modelClass::getDb();
-        
+
         parent::__construct($config);
-        
+
         /* @var $class FileMakerActiveRecord */
-        $this->_cmd =  $this->db->newCompoundFindCommand($this->layout);
+        $this->_cmd = $this->db->newCompoundFindCommand($this->layout);
         $this->_currentRequest = $this->db->newFindRequest($this->layout);
         $this->_requests[] = $this->_currentRequest;
     }
@@ -202,7 +203,8 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * Executes query and returns all results as an array.
      * @param Connection $db the DB connection used to create the DB command.
      * If null, the DB connection returned by [[modelClass]] will be used.
-     * @return array|ActiveRecord[] the query results. If the query results in nothing, an empty array will be returned.
+     * @return FileMakerActiveRecord[]|array the query results. If the query results in nothing, an empty array will be returned.
+     * @throws \Exception
      */
     public function all($db = null)
     {
@@ -212,14 +214,13 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         try {
             $result = $this->execute();
             $rows = $result->getRecords();
-        }
-        catch (\Exception $e){
-            if( $e->getCode() == 401 ){
+        } catch (\Exception $e) {
+            if ($e->getCode() == 401) {
                 return [];
             }
-            throw new \Exception($e->getMessage(), (int) $e->getCode(), $e);
+            throw $e;
         }
-        
+
         return $this->populate($rows);
     }
 
@@ -229,84 +230,83 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     public function prepare()
     {
         //No prepare when retirving record from its ID
-        if($this->_cmd instanceof \airmoi\FileMaker\Command\Find && $this->_cmd->recordId !== null){
+        if ($this->_cmd instanceof Find && $this->_cmd->recordId !== null) {
             return;
         }
-        
-        if( !$this->_cmd instanceof \airmoi\FileMaker\Command\PerformScript) {
+
+        if (!$this->_cmd instanceof PerformScript) {
             $this->applyFilterAll();
 
             //Add requests
-            foreach($this->_requests as $i => $findrequest){
-                if( !$findrequest->isEmpty()) {
+            foreach ($this->_requests as $i => $findrequest) {
+                if (!$findrequest->isEmpty()) {
                     $this->_cmd->add($i, $findrequest);
-                }
-                else {
+                } else {
                     unset($this->_requests[$i]);
                 }
             }
 
             //Tranform query to findall query if no find request set (empty CompoundFind are to supported by cwp)
-            if(!sizeof($this->_requests) && $this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind){
+            if (!sizeof($this->_requests) && $this->_cmd instanceof CompoundFind) {
                 $this->_cmd = $this->db->newFindAllCommand($this->layout);
+                Yii::warning("Query transformed to findAll (no request defined)", 'yii\db\Command::query');
             }
-        
+
             //Add sort rules
             $precedence = 0;
-            foreach($this->orderBy as $fieldName => $order){
+            foreach ($this->orderBy as $fieldName => $order) {
                 $this->_cmd->addSortRule($fieldName, ++$precedence, $order);
             }
-            
-            foreach ( $this->_scripts as $position => $scriptOptions){
-                if($position == 'beforeFind'){
+
+            foreach ($this->_scripts as $position => $scriptOptions) {
+                if ($position == 'beforeFind') {
                     $this->_cmd->setPreCommandScript($scriptOptions[0], $scriptOptions[1]);
-                } elseif($position == 'beforeSort'){
+                } elseif ($position == 'beforeSort') {
                     $this->_cmd->setPreSortScript($scriptOptions[0], $scriptOptions[1]);
-                } elseif($position == 'afterFind'){
+                } elseif ($position == 'afterFind') {
                     $this->_cmd->setScript($scriptOptions[0], $scriptOptions[1]);
                 }
             }
             $this->_cmd->setRelatedSetsFilters($this->relatedSetFilter, $this->relatedSetMax);
         }
         //Apply limits & offset
-        $this->offset = $this->offset == -1 ? null: $this->offset;
-        $this->limit = $this->limit == -1 ? null: $this->limit;
+        $this->offset = $this->offset == -1 ? null : $this->offset;
+        $this->limit = $this->limit == -1 ? null : $this->limit;
         $this->_cmd->setRange($this->offset, $this->limit);
         $this->_cmd->setResultLayout($this->resultLayout);
-        
-       
     }
-    
-    public function findByScript($scriptName, $scriptParameters) {
-        
+
+    public function findByScript($scriptName, $scriptParameters)
+    {
         $parameters = "";
-        foreach ($scriptParameters as $name => $value){
-           $parameters .= "<".$name.">".$value."</".$name.">";
+        foreach ($scriptParameters as $name => $value) {
+            $parameters .= "<" . $name . ">" . $value . "</" . $name . ">";
         }
         $this->_cmd = $this->db->newPerformScriptCommand($this->resultLayout, $scriptName, $parameters);
     }
-    
+
     /**
      * Prepare and execute the query
      * @return \airmoi\FileMaker\Object\Result
+     * @throws \yii\db\Exception
      */
-    public function execute() {
-        if( $this->_result === null){
+    public function execute()
+    {
+        if ($this->_result === null) {
             $this->prepare();
-            
+
             Yii::beginProfile($this->serializeQuery(), 'yii\db\Command::query');
-            
+
             try {
                 $this->_result = $this->_cmd->execute();
                 $this->_count = $this->_result->getFoundSetCount();
                 Yii::info(urldecode($this->db->getLastRequestedUrl()), __METHOD__);
-                
-            } catch (\Exception $e){
+            } catch (\Exception $e) {
                 Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
                 throw $this->db->getSchema()->convertException($e, $this->serializeQuery());
             }
-            
+
             Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
         }
         return $this->_result;
@@ -333,7 +333,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         if ($this->inverseOf !== null) {
             $this->addInverseRelations($models);
         }
-        
+
         if (!$this->asArray) {
             foreach ($models as $model) {
                 $model->afterFind();
@@ -342,7 +342,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
 
         return $models;
     }
-    
+
     /**
      * Converts found rows into model instances
      * @param \airmoi\FileMaker\Object\Record[] $records
@@ -359,19 +359,19 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
                 $row = [];
                 if (is_string($this->indexBy)) {
                     $key = $record->getField($this->indexBy);
-                } elseif(is_callable($this->indexBy)) {
+                } elseif (is_callable($this->indexBy)) {
                     $key = call_user_func($this->indexBy, $record);
                 }
                 $row['_recid'] = $record->getRecordId();
-                foreach($record->getFields() as $field){
+                foreach ($record->getFields() as $field) {
                     $row[$field] = $record->getField($field);
                 }
-                
+
                 //Store related sets
-                foreach($record->getLayout()->getRelatedSets() as $relatedSetName => $relatedset) { 
-                    foreach ( $relatedset as $i => $record) {
+                foreach ($record->getLayout()->getRelatedSets() as $relatedSetName => $relatedset) {
+                    foreach ($relatedset as $i => $record) {
                         $row[$relatedSetName][$i] = ['_recid' => $record->getRecordId()];
-                        foreach($record->getFields() as $field){
+                        foreach ($record->getFields() as $field) {
                             $row[$relatedSetName][$i][$field] = $relatedset->getField($field);
                         }
                     }
@@ -414,7 +414,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     private function removeDuplicatedModels($models)
     {
         $hash = [];
-        /* @var $class ActiveRecord */
+        /* @var $class FileMakerActiveRecord */
         $class = $this->modelClass;
         $pks = $class::primaryKey();
 
@@ -462,9 +462,10 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * Executes query and returns a single row of result.
      * @param Connection $db the DB connection used to create the DB command.
      * If null, the DB connection returned by [[modelClass]] will be used.
-     * @return \yii\db\ActiveRecord|array|null a single row of query result. Depending on the setting of [[asArray]],
+     * @return array|null|FileMakerActiveRecord a single row of query result. Depending on the setting of [[asArray]],
      * the query result may be either an array or an ActiveRecord object. Null will be returned
      * if the query results in nothing.
+     * @throws \Exception
      */
     public function one($db = null)
     {
@@ -473,21 +474,20 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         }
         try {
             $result = $this->execute();
-            if($result->getFetchCount() == 0){
+            if ($result->getFetchCount() == 0) {
                 return null;
             }
             $rows = $result->getFirstRecord();
-        }
-        catch (\Exception $e){
-            if( $e->getCode() == 401 ){
+        } catch (\Exception $e) {
+            if ($e->getCode() == 401) {
                 return null;
             }
-            throw new \Exception($e->getMessage(), (int) $e->getCode(), $e);
+            throw $e;
         }
-        
+
         return $this->populate([$rows])[0];
     }
-    
+
     /**
      * Sets the WHERE part of the current Request.
      * CAUTION : This will reset all existing requets / where conditions
@@ -505,19 +505,19 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      */
     public function where($condition, $layout = null)
     {
-        if( $layout === null ) {
+        if ($layout === null) {
             $layout = $this->layout;
         }
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_requests = [$this->_currentRequest];
-        foreach($condition as $fieldName => $testvalue) {
+        foreach ($condition as $fieldName => $testvalue) {
             //if(!$testvalue == '' ) {
-                $this->_currentRequest->addFindCriterion($fieldName, '=='.$testvalue.'');
+            $this->_currentRequest->addFindCriterion($fieldName, '==' . $testvalue . '');
             //}
         }
         return $this;
     }
-    
+
     /**
      * Adds an additional WHERE condition to the existing one.
      * The new condition and the existing one will be joined using the 'AND' operator.
@@ -528,14 +528,14 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      */
     public function andWhere($condition)
     {
-        foreach($condition as $fieldName => $testvalue) {
+        foreach ($condition as $fieldName => $testvalue) {
             //if(!$testvalue=='') {
-                $this->_currentRequest->addFindCriterion($fieldName, '=='.$testvalue.'');
+            $this->_currentRequest->addFindCriterion($fieldName, '==' . $testvalue . '');
             //}
         }
         return $this;
     }
-    
+
     /**
      * Add a WHERE condition that will be applied to all requests that are not omit queries
      * when performing the query
@@ -554,7 +554,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         }*/
         return $this;
     }
-    
+
     /**
      * Add a additionnal WHERE condition that will be applied to all requests that are not omit queries
      * when performing the query
@@ -573,7 +573,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         }*/
         return $this;
     }
-    
+
     /**
      * Add a additionnal WHERE condition that will be applied to all requests that are not omit queries
      * when performing the query
@@ -587,25 +587,26 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         $this->filterAll[] = ['or', $condition];
         return $this;
     }
-    
+
     /**
      * Adds an additional WHERE condition to the existing one.
      * The new condition and the existing one will be joined using the 'AND' operator.
      * @param array $condition the new WHERE condition (name => value)
+     * @param null|string $layout
      * @return static the query object itself
      * @see where()
      * @see orWhere()
      */
     public function filterWhere(array $condition, $layout = null)
     {
-        if( $layout === null ) {
+        if ($layout === null) {
             $layout = $this->layout;
         }
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_requests = [$this->_currentRequest];
-        foreach($condition as $fieldName => $testvalue) {
-            if(!(strcmp($testvalue, '') === 0)) {
-                if ( $testvalue == null ){
+        foreach ($condition as $fieldName => $testvalue) {
+            if (!(strcmp($testvalue, '') === 0)) {
+                if ($testvalue == null) {
                     $testvalue = '=';
                 }
                 $this->_currentRequest->addFindCriterion($fieldName, $testvalue);
@@ -613,7 +614,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         }
         return $this;
     }
-    
+
     /**
      * Adds an additional WHERE condition to the existing one.
      * The new condition and the existing one will be joined using the 'AND' operator.
@@ -624,9 +625,9 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      */
     public function andFilterWhere(array $condition)
     {
-        foreach($condition as $fieldName => $testvalue) {
-            if(!(strcmp($testvalue, '') === 0)) {
-                if ( $testvalue === null ){
+        foreach ($condition as $fieldName => $testvalue) {
+            if (!(strcmp($testvalue, '') === 0)) {
+                if ($testvalue === null) {
                     $testvalue = '=';
                 }
                 $this->_currentRequest->addFindCriterion($fieldName, $testvalue);
@@ -640,13 +641,14 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * The new condition and the existing one will be joined using the 'OR' operator.
      * @param string|array $condition the new WHERE condition. Please refer to [[where()]]
      * on how to specify this parameter.
+     * @param null|string $layout
      * @return static the query object itself
      * @see where()
      * @see andWhere()
      */
     public function orWhere($condition, $layout = null)
     {
-        if( $layout === null ) {
+        if ($layout === null) {
             $layout = $this->layout;
         }
         $this->_currentRequest = $this->db->newFindRequest($layout);
@@ -660,13 +662,14 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * This will create a new find request that will act as a 'OR' request
      * @param string|array $condition the new WHERE condition. Please refer to [[where()]]
      * on how to specify this parameter.
+     * @param null|string $layout
      * @return static the query object itself
      * @see where()
      * @see andWhere()
      */
     public function orFilterWhere(array $condition, $layout = null)
     {
-        if( $layout === null ) {
+        if ($layout === null) {
             $layout = $this->layout;
         }
         $this->_currentRequest = $this->db->newFindRequest($layout);
@@ -679,26 +682,28 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * Adds a 'ommit' request .
      * @param string|array $condition the new WHERE condition. Please refer to [[where()]]
      * on how to specify this parameter.
+     * @param null|string $layout
+     * @param bool $keepCurrentRequest
      * @return static the query object itself
      * @see where()
      * @see andWhere()
      */
     public function exceptWhere($condition, $layout = null, $keepCurrentRequest = true)
     {
-        if( $layout === null ) {
+        if ($layout === null) {
             $layout = $this->layout;
         }
-        
+
         $previousRequest = $this->_currentRequest;
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_currentRequest->setOmit(true);
         $this->_requests[] = $this->_currentRequest;
         $this->andWhere($condition);
-        
-        if($keepCurrentRequest){
+
+        if ($keepCurrentRequest) {
             $this->_currentRequest = $previousRequest;
         }
-        
+
         return $this;
     }
 
@@ -708,77 +713,81 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * on how to specify this parameter.
      * @param string $layout the layout name to use with the created request
      * @param bool $keepCurrentRequest wether to keep the current request active
-     * 
-     * 
+     *
+     *
      * @return static the query object itself
      * @see where()
      * @see andWhere()
      */
     public function exceptFilterWhere($condition, $layout = null, $keepCurrentRequest = true)
     {
-        if( $layout === null ) {
+        if ($layout === null) {
             $layout = $this->layout;
         }
-        
+
         $previousRequest = $this->_currentRequest;
         $this->_currentRequest = $this->db->newFindRequest($layout);
         $this->_currentRequest->setOmit(true);
         $this->_requests[] = $this->_currentRequest;
         $this->andFilterWhere($condition);
-        
-        if($keepCurrentRequest){
+
+        if ($keepCurrentRequest) {
             $this->_currentRequest = $previousRequest;
         }
-        
+
         return $this;
     }
-    
+
     /**
      * Sets a ScriptMaker script to be run before performing the query.
-     * 
+     *
      * @param string $scriptname
      * @param string $scriptParams
      * @return \airmoi\yii2fmconnector\api\ActiveFind
      */
-    public function addPreFindScript ($scriptname, $scriptParams = null){
+    public function addPreFindScript($scriptname, $scriptParams = null)
+    {
         $this->_scripts['beforeFind'] = [$scriptname, $scriptParams];
         return $this;
     }
-    
+
     /**
-     * Sets a ScriptMaker script to be run after performing a the query, 
+     * Sets a ScriptMaker script to be run after performing a the query,
      * but before sorting the result set.
-     * 
+     *
      * @param string $scriptname
      * @param string $scriptParams
      * @return \airmoi\yii2fmconnector\api\ActiveFind
      */
-    public function addPreSortScript ($scriptname, $scriptParams = null){
+    public function addPreSortScript($scriptname, $scriptParams = null)
+    {
         $this->_scripts['beforeSort'] = [$scriptname, $scriptParams];
         return $this;
     }
-    
+
     /**
-     * Sets a ScriptMaker script to be run after the query result set is 
+     * Sets a ScriptMaker script to be run after the query result set is
      * generated and sorted.
-     * 
+     *
      * @param string $scriptname
      * @param string $scriptParams
      * @return \airmoi\yii2fmconnector\api\ActiveFind
      */
-    public function addAfterFindScript ($scriptname, $scriptParams = null){
+    public function addAfterFindScript($scriptname, $scriptParams = null)
+    {
         $this->_scripts['afterFind'] = [$scriptname, $scriptParams];
         return $this;
     }
-    
+
     /**
-     * Add a new request to the query stack and allow direct access to the object 
+     * Add a new request to the query stack and allow direct access to the object
      * @param array $condition @see where()
      * @param string $layout specifi layout to use for the request
      * @return \airmoi\FileMaker\Command\FindRequest
      */
-    public function addRequest ($condition, $layout = null){
-        if( $layout === null ) {
+    public function addRequest($condition, $layout = null)
+    {
+        if ($layout === null) {
             $layout = $this->layout;
         }
         $this->_currentRequest = $this->db->newFindRequest($layout);
@@ -837,10 +846,10 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     {
         $result = [];
         if (is_array($columns)) {
-            foreach ( $columns as $column => $order){
-                if( $order == SORT_ASC){
+            foreach ($columns as $column => $order) {
+                if ($order == SORT_ASC) {
                     $result[$column] = FileMaker::SORT_ASCEND;
-                } elseif( $order == SORT_DESC){
+                } elseif ($order == SORT_DESC) {
                     $result[$column] = FileMaker::SORT_DESCEND;
                 } else {
                     $result[$column] = $order;
@@ -848,7 +857,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
             }
         } else {
             $columns = preg_split('/\s*,\s*/', trim($columns), -1, PREG_SPLIT_NO_EMPTY);
-            
+
             foreach ($columns as $column) {
                 if (preg_match('/^(.*?)\s+(asc|desc)$/i', $column, $matches)) {
                     $result[$matches[1]] = strcasecmp($matches[2], 'desc') ? FileMaker::SORT_ASCEND : FileMaker::SORT_DESCEND;
@@ -857,7 +866,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
                 }
             }
         }
-        
+
         return $result;
     }
 
@@ -890,7 +899,8 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * If this parameter is not given, the `db` application component will be used.
      * @return integer number of records
      */
-    public function count($q = '*', $db = NULL) {
+    public function count($q = '*', $db = null)
+    {
         if ($this->emulateExecution) {
             return 0;
         }
@@ -904,13 +914,16 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * If this parameter is not given, the `db` application component will be used.
      * @return boolean whether the query result contains any row of data.
      */
-    public function exists($db = null) {
+    public function exists($db = null)
+    {
         if ($this->emulateExecution) {
             return false;
         }
         $this->execute();
         return $this->_count > 0;
-    }/**
+    }
+
+    /**
      * Sets the [[indexBy]] property.
      * @param string|callable $column the name of the column by which the query results should be indexed by.
      * This can also be a callable (e.g. anonymous function) that returns the index value based on the given
@@ -930,91 +943,105 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         $this->indexBy = $column;
         return $this;
     }
-    
-    private function serializeQuery() {
+
+    private function serializeQuery()
+    {
         $command = ['layout' => $this->layout];
         $command['method'] = get_class($this->_cmd);
-        if($this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind){
+        if ($this->_cmd instanceof CompoundFind) {
             $command['requests'] = [];
-            foreach( $this->_requests as $request ){
-               $command['requests'][] = $request->findCriteria;
+            foreach ($this->_requests as $request) {
+                $command['requests'][] = $request->findCriteria;
             }
-        } 
+        } elseif ($this->_cmd instanceof Find) {
+            $command['requests'] = ["_recId" => $this->_cmd->recordId];
+        } elseif ($this->_cmd instanceof PerformScript) {
+           //Not implemented yet : missing access to PerformFind Params
+        }
+        if (sizeof($this->_scripts)) {
+            $command['scripts'] = [];
+            foreach ($this->_scripts as $position => $scriptOptions) {
+                $command['scripts'][$position] = $scriptOptions;
+            }
+        }
         $command['offset'] = $this->offset;
         $command['limit'] = $this->limit;
         $command['sort'] = $this->orderBy;
-        
+
         return json_encode($command);
     }
-    
+
     /**
-     * 
+     *
      * @param int $id
      * @return FileMakerActiveRecord
      */
-    public function getRecordById($id){
+    public function getRecordById($id)
+    {
         $this->_cmd = $this->db->newFindCommand($this->resultLayout);
         $this->_cmd->setRecordId($id);
         return $record = $this->one();
     }
-    
+
     /**
-     * Sets a filter to restrict the number of related records to return from 
-     * a portal. 
+     * Sets a filter to restrict the number of related records to return from
+     * a portal.
      *
-     * The filter limits the number of related records returned by respecting 
-     * the settings specified in the FileMaker Pro Portal Setup dialog box. 
+     * The filter limits the number of related records returned by respecting
+     * the settings specified in the FileMaker Pro Portal Setup dialog box.
      *
-     * @param string $relatedsetsfilter Specify one of these values to  
-     *        control filtering: 
-     *        - 'layout': Apply the settings specified in the FileMaker Pro 
-     *                    Portal Setup dialog box. The records are sorted based 
-     *                    on the sort  defined in the Portal Setup dialog box, 
-     *                    with the record set filtered to start with the 
+     * @param string $relatedsetsfilter Specify one of these values to
+     *        control filtering:
+     *        - 'layout': Apply the settings specified in the FileMaker Pro
+     *                    Portal Setup dialog box. The records are sorted based
+     *                    on the sort  defined in the Portal Setup dialog box,
+     *                    with the record set filtered to start with the
      *                    specified "Initial row."
-     *        - 'none': Return all related records in the portal without 
+     *        - 'none': Return all related records in the portal without
      *                  filtering or presorting them.
-     * 
-     * @param string $relatedsetsmax If the "Show vertical scroll bar" setting 
-     *        is enabled in the Portal Setup dialog box, specify one of these 
+     *
+     * @param string $relatedsetsmax If the "Show vertical scroll bar" setting
+     *        is enabled in the Portal Setup dialog box, specify one of these
      *        values:
-     *        - an integer value: Return this maximum number of related records 
+     *        - an integer value: Return this maximum number of related records
      *                            after the initial record.
      *        - 'all': Return all of the related records in the portal.
-     *                 If "Show vertical scroll bar" is disabled, the Portal 
-     *                 Setup dialog box's "Number of rows" setting determines 
-     *                 the maximum number of related records to return. 
-     * 
+     *                 If "Show vertical scroll bar" is disabled, the Portal
+     *                 Setup dialog box's "Number of rows" setting determines
+     *                 the maximum number of related records to return.
+     *
      * @return static the query object itself.
      */
     public function setRelatedSetsFilters($relatedsetsfilter, $relatedsetsmax = null)
     {
-    	$this->relatedSetFilter = $relatedsetsfilter;
+        $this->relatedSetFilter = $relatedsetsfilter;
         $this->relatedSetMax = $relatedsetsmax;
         return $this;
     }
 
     /**
-     * Set a global field to be define before perfoming the command. 
-     * 
+     * Set a global field to be define before perfoming the command.
+     *
      * @param string $fieldName the global field name.
      * @param string $fieldValue value to be set.
-     * 
+     *
      * @return static the query object itself.
      */
-    public function setGlobal($fieldName, $fieldValue) {
+    public function setGlobal($fieldName, $fieldValue)
+    {
         $this->_cmd->setGlobal($fieldName, $fieldValue);
         return $this;
     }
-    
+
     /**
      * Apply filterAll to all requets
      */
-    private function applyFilterAll() {
-        foreach ( $this->filterAll as $condition) {
-            if ( $condition[0] == 'and') {
-                foreach ( $this->_requests as $request) {
-                    if(!$request->omit) {
+    private function applyFilterAll()
+    {
+        foreach ($this->filterAll as $condition) {
+            if ($condition[0] == 'and') {
+                foreach ($this->_requests as $request) {
+                    if (!$request->omit) {
                         $this->_currentRequest = $request;
                         $this->andFilterWhere($condition[1]);
                     }
@@ -1024,16 +1051,17 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
             }
         }
     }
-    
+
     /**
-     * 
+     *
      * @param array $condition the WHERE condition (name => value) to apply
      */
-    private function applyOrFilterAll($condition){
+    private function applyOrFilterAll($condition)
+    {
         $newRequests = [];
-        foreach ( $this->_requests as $request ){
+        foreach ($this->_requests as $request) {
             $newRequests[] = $request;
-            if(!$request->omit) {
+            if (!$request->omit) {
                 $this->_currentRequest = clone $request;
                 $this->andFilterWhere($condition);
                 $newRequests[] = $this->_currentRequest;
@@ -1058,3 +1086,4 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         return $this;
     }
 }
+

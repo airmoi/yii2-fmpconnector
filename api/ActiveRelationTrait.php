@@ -1,6 +1,5 @@
 <?php
 /**
-
  */
 
 namespace airmoi\yii2fmconnector\api;
@@ -154,7 +153,10 @@ trait ActiveRelationTrait
             $method = new \ReflectionMethod($model, 'get' . $name);
             $realName = lcfirst(substr($method->getName(), 3));
             if ($realName !== $name) {
-                throw new InvalidParamException('Relation names are case sensitive. ' . get_class($model) . " has a relation named \"$realName\" instead of \"$name\".");
+                throw new InvalidParamException(
+                    'Relation names are case sensitive. '
+                    . get_class($model) . " has a relation named \"$realName\" instead of \"$name\"."
+                );
             }
         }
 
@@ -177,7 +179,10 @@ trait ActiveRelationTrait
                 if (!isset($inverseRelation)) {
                     $inverseRelation = $relatedModel->getRelation($this->inverseOf);
                 }
-                $relatedModel->populateRelation($this->inverseOf, $inverseRelation->multiple ? [$this->primaryModel] : $this->primaryModel);
+                $relatedModel->populateRelation(
+                    $this->inverseOf,
+                    $inverseRelation->multiple ? [$this->primaryModel] : $this->primaryModel
+                );
             } else {
                 if (!isset($inverseRelation)) {
                     $inverseRelation = (new $this->modelClass)->getRelation($this->inverseOf);
@@ -301,7 +306,9 @@ trait ActiveRelationTrait
         }
         $model = reset($models);
         /* @var $relation ActiveQueryInterface|ActiveFind */
-        $relation = $model instanceof ActiveRecordInterface ? $model->getRelation($name) : (new $this->modelClass)->getRelation($name);
+        $relation = $model instanceof ActiveRecordInterface ?
+            $model->getRelation($name)
+            : (new $this->modelClass)->getRelation($name);
 
         if ($relation->multiple) {
             $buckets = $this->buildBuckets($primaryModels, $relation->link, null, null, false);
@@ -472,7 +479,7 @@ trait ActiveRelationTrait
             }
 
             $attributeName = reset($attributes);
-            foreach($values as $value){
+            foreach ($values as $value) {
                 $this->orWhere([$attributeName => $value]);
             }
         } else {
