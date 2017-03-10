@@ -265,9 +265,10 @@ class Schema extends \yii\db\Schema
             Yii::beginProfile($token, __METHOD__);
 
             $filter = $this->layoutFiltterPattern;
-            $this->_layoutList = array_filter($this->db->listLayouts(), function ($v) use ($filter) {
-                return preg_match($filter, $v);
+            $layouts = array_filter($this->db->listLayouts(), function ($value) use ($filter) {
+                return preg_match($filter, $value);
             });
+            $this->_layoutList = array_values($layouts);
             Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
         } catch (FileMakerException $e) {
             Yii::endProfile($token, __METHOD__);

@@ -77,49 +77,49 @@ return [
 
 0. PHP-API
 
-add and customize this lines into the components section of your config file
+You may also configure a connection using PHP-API this way
 
 ```
-...
-    'components" => [
-            ...
-            'fmphelper' => [
-                        'class' => 'airmoi\yii2fmconnector\api\FmpHelper',
-                        'host' => "localhost",
-                        'db' => 'your_dn_name',
-                        'username' => '',
-                        'password' => '',
-                        'resultLayout' => 'PHP_scriptResult', //Layout used to return performScriptResult
-                        'resultField' => 'PHP_scriptResult', //Field used in "resultLayout" to store script results
-                        'valueListLayout' => 'PHP_valueLists', //Layout used to retrieve generic valueLists
-                    ],
-            ...
+[
+    'class' => 'airmoi\yii2fmconnector\api\Connection',
+    'dsn' => 'fmpapi:host=your_host_ip;dbname=your_db_name',
+    'username' => 'db username',
+    'password' => 'db passwod',
+    'charset' => 'utf8',
+    //'schemaCache' => 'cache',
+    //'enableSchemaCache' => true,
+    //'schemaCacheDuration' => 3600,
+    'options' => [ //Specific connector options
+        'dateFormat' => 'd/m/Y',
+        'emptyAsNull' => true,
     ],
-...
-```
-
-Acces FileMaker API using fmhelper component
-```php
-<?php 
-Yii::$app->fmhelper
-?>
+    'schemaMap' => [
+        'fmpapi' => [
+            'class' => 'airmoi\yii2fmconnector\api\Schema',
+            //'layoutFiltterPattern' =>  '/^PHP_/' //Regex pattern to filter layout's list
+        ]
+    ]
+]
 ```
 
 0. Customize gii
 
-Add these lines to gii module config to enhance model & CRUD generators
+Add these lines to gii module config to enhance model and CRUD generators
 ```php
 'generators' => [
-                    'model' => [
-                        'class' => 'yii\gii\generators\model\Generator',
-                        'templates' => [
-                            'FileMaker' => '@app/vendor/airmoi/yii2-fmconnector/gii/templates/',
-                        ]
-                    ],
-                     'crud' => [ // generator name
-                        'class' => 'airmoi\yii2fmconnector\gii\crud\Generator', // generator class
-                    ]
-                ],
-        ];
+        'model' => [
+        'class' => 'yii\gii\generators\model\Generator',
+        'templates' => [
+            'FileMakerAPI' => '@app/vendor/airmoi/yii2-fmconnector/gii/api/templates/',
+            'FileMakerODBC' => '@app/vendor/airmoi/yii2-fmconnector/gii/odbc/templates/',
+        ]
+    ],
+     'crud' => [ // generator name
+        'class' => 'airmoi\yii2fmconnector\gii\api\crud\Generator', // generator class
+        /*'templates' => [ //setting for out templates
+            'myCrud' => '@app/myTemplates/crud/default', // template name => path to template
+        ]*/
+    ]
+],
 ```
 
