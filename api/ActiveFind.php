@@ -943,6 +943,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     private function serializeQuery()
     {
         $command = ['layout' => $this->layout];
+        $command['resultLayout'] = $this->resultLayout;
         $command['method'] = get_class($this->_cmd);
         if ($this->_cmd instanceof \airmoi\FileMaker\Command\CompoundFind) {
             $command['requests'] = [];
@@ -953,6 +954,8 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         $command['offset'] = $this->offset;
         $command['limit'] = $this->limit;
         $command['sort'] = $this->orderBy;
+        $command['globals'] = $this->_cmd->getGlobals();
+        $command['scripts'] = $this->_scripts;
 
         return json_encode($command);
     }
