@@ -6,13 +6,12 @@
  */
 
 namespace airmoi\yii2fmconnector\api;
-use yii;
-use yii\base\Object;
 
+use yii;
 
 /**
  * ColumnSchema class describes the metadata of a column in a database table.
- * This extension hooks typecast to DB to handle correct dataType casting has 
+ * This extension hooks typecast to DB to handle correct dataType casting has
  * PDO binding functions are buggy with FileMaker ODBC connector
  *
  * @author Romain Dunand <airmoi@gmail.com>
@@ -23,11 +22,12 @@ class ColumnSchema extends \yii\db\ColumnSchema
     public $fmType;
     public $global;
     public $maxRepeat;
-    
+
     public $isRelated;
     public $relationName;
-    
+
     public $valueList;
+
     /**
      * Converts the input value according to [[phpType]] after retrieval from the database.
      * If the value is null or an [[Expression]], it will not be converted.
@@ -36,26 +36,30 @@ class ColumnSchema extends \yii\db\ColumnSchema
      */
     public function phpTypecast($value)
     {
-        if ($value === '' && $this->type !== Schema::TYPE_TEXT && $this->type !== Schema::TYPE_STRING && $this->type !== Schema::TYPE_BINARY) {
+        if ($value === ''
+            && $this->type !== Schema::TYPE_TEXT
+            && $this->type !== Schema::TYPE_STRING
+            && $this->type !== Schema::TYPE_BINARY
+        ) {
             return null;
         }
-        if ($value === null || gettype($value) === $this->phpType || $value instanceof Expression) {
+        if ($value === null || gettype($value) === $this->phpType || $value instanceof yii\db\Expression) {
             return $value;
         }
         switch ($this->phpType) {
             case 'resource':
             case 'string':
-                return is_resource($value) ? $value : (string) $value;
+                return is_resource($value) ? $value : (string)$value;
             case 'integer':
-                return (integer) $value;
+                return (integer)$value;
             case 'boolean':
-                return (boolean) $value;
+                return (boolean)$value;
             case 'double':
-                return (double) $value;
+                return (double)$value;
             case 'date':
-                return (string) $value;
+                return (string)$value;
             case 'timestamp':
-                return (string) $value;
+                return (string)$value;
         }
 
         return $value;
@@ -70,8 +74,9 @@ class ColumnSchema extends \yii\db\ColumnSchema
      */
     public function dbTypecast($value)
     {
-       if( (  $value==='' || $value===null ) && $this->allowNull) {
+        if (($value === '' || $value === null) && $this->allowNull) {
             return '';
-       }
+        }
+        return $value;
     }
 }

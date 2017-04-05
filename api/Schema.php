@@ -6,6 +6,8 @@
  */
 
 namespace airmoi\yii2fmconnector\api;
+
+use airmoi\FileMaker\FileMakerException;
 use yii;
 use airmoi\yii2fmconnector\api\ColumnSchema;
 use airmoi\FileMaker\FileMaker;
@@ -18,33 +20,33 @@ use yii\helpers\ArrayHelper;
  *
  * @author Romain Dunand <airmoi@gmail.com>
  * @since 1.0
- * 
+ *
  * @method TableSchema getTableSchema($name, $refresh = false) Obtains the metadata for the named table.
- * 
+ *
  * @property Connection $db Description
  */
 class Schema extends \yii\db\Schema
 {
-    
+
     public $defaultPrimaryKey = 'zkp';
     public $primaryKeyPattern = '/^zkp[_]?/';
-    
+
     /**
      * Pattern used to detect if a field is a foreign keys field
-     * second match pattern must return a table trigram (XXX) 
-     * 
-     * @var string 
+     * second match pattern must return a table trigram (XXX)
+     *
+     * @var string
      */
     public $foreignKeyPattern = '/^(zkf|zkp)_([^_]*).*/';
-    
+
     /**
      * Pattern used to detect if a field is a foreign keys field
-     * second match pattern must return a table trigram (XXX) 
-     * 
-     * @var string 
+     * second match pattern must return a table trigram (XXX)
+     *
+     * @var string
      */
     public $layoutFiltterPattern = '/^PHP_.*/';
-    
+
     /**
      * @var array mapping from physical column types (keys) to abstract column types (values)
      */
@@ -57,13 +59,13 @@ class Schema extends \yii\db\Schema
         'container' => self::TYPE_BINARY,
 
     ];
-    
+
     /**
      *
      * @var \airmoi\FileMaker\Object\Layout[]
      */
     private $_layout = [];
-    
+
     /**
      *
      * @var string[]
@@ -88,26 +90,28 @@ class Schema extends \yii\db\Schema
             return null;
         }
     }
-    
+
     /**
-     * 
+     *
      * @param string $layoutName
      * @return Layout
+     * @throws Exception
      */
-    public function getlayout($layoutName) {  
-        if(!isset($this->_layout[$layoutName])){
+    public function getlayout($layoutName)
+    {
+        if (!isset($this->_layout[$layoutName])) {
             $token = 'Getting layout "' . $layoutName . '"';
             try {
                 Yii::info($token, __METHOD__);
                 Yii::beginProfile($token, __METHOD__);
-                
+
                 $this->_layout[$layoutName] = $this->db->getLayout($layoutName);
                 $this->_layout[$layoutName]->loadExtendedInfo();
-                
-                Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
-            } catch (airmoi\FileMaker\FileMakerException $e){
+
+                Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
+            } catch (FileMakerException $e) {
                 Yii::endProfile($token, __METHOD__);
-                throw new Exception($e->getMessage(), (int) $e->getCode(), $e);
+                throw new Exception($e->getMessage(), (int)$e->getCode(), $e);
             }
         }
         return $this->_layout[$layoutName];
@@ -117,23 +121,25 @@ class Schema extends \yii\db\Schema
      * Resolves the table name and schema name (if any).
      * @param TableSchema $table the table metadata object
      * @param string $name the table name
+     * @return string
      */
-    protected function resolveTableNames( TableSchema $table, $name)
+    protected function resolveTableNames(TableSchema $table, $name)
     {
         //Check if Layout exists
-        $table->baseTable = $this->getlayout($name)->table; 
+        $table->baseTable = $this->getlayout($name)->table;
         $table->layouts[] = $table->name = $table->fullName = $table->defaultLayout = $name;
-        
+
         return $name;
     }
-    
-    public function findLayoutsFromSameTable(TableSchema $table) {
+
+    public function findLayoutsFromSameTable(TableSchema $table)
+    {
         $layouts = $this->findTableNames();
-        foreach( $layouts as $layoutName ) {
-            if($layoutName == $table->name || $layoutName == ''){
+        foreach ($layouts as $layoutName) {
+            if ($layoutName == $table->name || $layoutName == '') {
                 continue;
             }
-            if ( $this->getlayout($layoutName)->table == $table->baseTable ){
+            if ($this->getlayout($layoutName)->table == $table->baseTable) {
                 $table->layouts[] = $layoutName;
             }
         }
@@ -151,39 +157,38 @@ class Schema extends \yii\db\Schema
         /**
          * @todo gerer les multivaluées
          */
-        $column->isRelated = strpos($field->name, '::') !== false ;
+        $column->isRelated = strpos($field->name, '::') !== false;
         //Remove OT prefix for fields from related sets
-        if ( $column->isRelated ) {
+        if ($column->isRelated) {
             $fieldParts = explode('::', $field->name);
             $column->relationName = $fieldParts[0];
             $column->name = $fieldParts[1];
-        } 
-        else {
+        } else {
             $column->name = $field->name;
         }
-        
-        
+
+
         $column->allowNull = !$field->hasValidationRule(FileMaker::RULE_NOTEMPTY);
         $column->dbType = $field->result;
-        //$column->isPrimaryKey = substr($column->name, 0, 3)=="zkp"; 
+        //$column->isPrimaryKey = substr($column->name, 0, 3)=="zkp";
         $column->isPrimaryKey = preg_match($this->primaryKeyPattern, $column->name);
-        
+
         $column->fmType = $field->type;
         $column->global = $field->isGlobal();
         $column->valueList = $field->valueList;
         $column->maxRepeat = $field->maxRepeat;
-        
+
         /**
          * Dirty hack to prevent field edition on calculated / conatiners fields (will be ignored in generated rules)
          */
-        $column->autoIncrement = ($field->type=='calculation' or $column->isPrimaryKey);
-        
+        $column->autoIncrement = ($field->type == 'calculation' or $column->isPrimaryKey);
+
         $column->unsigned = false;
         $column->comment = "";
-        
+
         $column->type = isset($this->typeMap[$field->result]) ? $this->typeMap[$field->result] : self::TYPE_STRING;
         $column->size = $field->maxCharacters;
-       
+
         $column->phpType = $this->getColumnPhpType($field->result);
 
         return $column;
@@ -197,13 +202,14 @@ class Schema extends \yii\db\Schema
     protected function findColumns(TableSchema $table)
     {
         $fields = [];
-        foreach ( $table->layouts as $layoutName){
-            $fields = ArrayHelper::merge( $this->getLayout($layoutName)->getFields(), $fields);
+        foreach ($table->layouts as $layoutName) {
+            $fields = ArrayHelper::merge($this->getLayout($layoutName)->getFields(), $fields);
         }
-        
-        if ( sizeof( $fields ) == 0)
-                return false;
-        
+
+        if (sizeof($fields) == 0) {
+            return false;
+        }
+
         $table->columns['_recid'] = $this->createColumnSchema();
         $table->columns['_recid']->name = '_recid';
         $table->columns['_recid']->allowNull = false;
@@ -211,35 +217,33 @@ class Schema extends \yii\db\Schema
         $table->columns['_recid']->autoIncrement = true;
         $table->columns['_recid']->phpType = 'integer';
         $table->primaryKey[] = '_recid';
-        
+
         foreach ($fields as $field) {
-            if ( $field->name == ''){
+            if ($field->name == '') {
                 continue;
             }
             $column = $this->loadColumnSchema($field);
-            
+
             //handle related Fields outside portals
-            if($column->isRelated){
-                if( !isset($table->relations[$column->relationName])){
-                    $tableSchema =  new TableSchema();
+            if ($column->isRelated) {
+                if (!isset($table->relations[$column->relationName])) {
+                    $tableSchema = new TableSchema();
                     $tableSchema->name = $tableSchema->fullName = $column->relationName;
                     $tableSchema->defaultLayout = $table->defaultLayout;
                     $table->relations[$column->relationName] = $tableSchema;
-                }
-                else {
+                } else {
                     $tableSchema = $table->relations[$column->relationName];
                 }
-                
-                if ( !isset( $tableSchema->columns[$column->name]) ) {
+
+                if (!isset($tableSchema->columns[$column->name])) {
                     $tableSchema->columns[$column->name] = $column;
                 }
                 //$table->relations[$column->relationName][1][$column->name] = $column;
-            }
-            elseif ( !isset( $table->columns[$column->name]) ) {
+            } elseif (!isset($table->columns[$column->name])) {
                 $table->columns[$column->name] = $column;
             }
         }
-        
+
         asort($table->columns);
         return true;
     }
@@ -248,11 +252,12 @@ class Schema extends \yii\db\Schema
      * Returns all table names in the database.
      * @param string $schema the schema of the tables. Defaults to empty string, meaning the current or default schema.
      * @return array all table names in the database. The names have NO schema name prefix.
+     * @throws Exception
      */
     protected function findTableNames($schema = '')
     {
         $token = 'Getting layout\'s list';
-        if(sizeof($this->_layoutList) > 0) {
+        if (sizeof($this->_layoutList) > 0) {
             return $this->_layoutList;
         }
         try {
@@ -260,43 +265,45 @@ class Schema extends \yii\db\Schema
             Yii::beginProfile($token, __METHOD__);
 
             $filter = $this->layoutFiltterPattern;
-            $this->_layoutList = array_filter($this->db->listLayouts(), function($v) use($filter) { return preg_match($filter, $v); });
-            Yii::info( $this->db->getLastRequestedUrl() , __METHOD__);
-        } catch (airmoi\FileMaker\FileMakerException $e){
+            $this->_layoutList = array_filter($this->db->listLayouts(), function ($v) use ($filter) {
+                return preg_match($filter, $v);
+            });
+            Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
+        } catch (FileMakerException $e) {
             Yii::endProfile($token, __METHOD__);
-            throw new Exception($e->getMessage(), $e->errorInfo, (int) $e->getCode(), $e);
+            throw new Exception($e->getMessage(), $e->errorInfo, (int)$e->getCode(), $e);
         }
         return $this->_layoutList;
     }
 
     /**
      * Collects the value lists names for the given layout.
-     * @param string $schema the schema of the tables. Defaults to empty string, meaning the current or default schema.
+     * @param TableSchema $table
      * @return array all table names in the database. The names have NO schema name prefix.
+     * @throws Exception
      */
     protected function findValueLists(TableSchema $table)
     {
         $table->valueLists = $this->getLayout($table->name)->listValueLists();
         return $table->valueLists;
     }
-    
+
     /**
      * Collects the foreign key column details for the given table.
      * @param TableSchema $table the table metadata
      */
     protected function findConstraints(TableSchema $table)
-    {  
-        foreach ( $table->layouts as $layoutName) {
-            foreach( $this->getLayout($layoutName)->getRelatedSets() as $relation){
-
+    {
+        foreach ($table->layouts as $layoutName) {
+            foreach ($this->getLayout($layoutName)->getRelatedSets() as $relation) {
                 // Check if portal of the same related table was already declared
                 $relationName = $relation->name . '_portal';
-                if(isset($table->relations[$relationName])) {
+                if (isset($table->relations[$relationName])) {
                     $tableSchema = $table->relations[$relationName];
-                } else{
+                } else {
                     $tableSchema = new TableSchema();
                     $tableSchema->name = $relation->name;
-                    $tableSchema->fullName =  $relationName;
+                    $tableSchema->fullName = $relationName;
                     $tableSchema->isPortal = true;
                     $tableSchema->defaultLayout = $layoutName;
                     $tableSchema->baseTable = $relation->name;
@@ -311,40 +318,38 @@ class Schema extends \yii\db\Schema
 
                     $tableSchema->columns['_recid'] = $pk;
                 }
-                
-                
+
+
                 $tableSchema->layouts[] = $layoutName;
-                
-                foreach( $relation->getFields() as $field ){
+
+                foreach ($relation->getFields() as $field) {
                     $column = $this->loadColumnSchema($field);
                     //handle related Fields from different OT
-                    if($column->isRelated && $column->relationName !=  $tableSchema->name){
-                        if( !isset($tableSchema->relations[$column->relationName])){
-                            $relatedSchema =  new TableSchema();
+                    if ($column->isRelated && $column->relationName != $tableSchema->name) {
+                        if (!isset($tableSchema->relations[$column->relationName])) {
+                            $relatedSchema = new TableSchema();
                             $relatedSchema->name = $relatedSchema->fullName = $column->relationName;
                             $relatedSchema->defaultLayout = $table->defaultLayout;
                             $tableSchema->relations[$column->relationName] = $relatedSchema;
-                        }
-                        else {
+                        } else {
                             $relatedSchema = $tableSchema->relations[$column->relationName];
                         }
 
-                        if ( !isset( $relatedSchema->columns[$column->name]) ) {
+                        if (!isset($relatedSchema->columns[$column->name])) {
                             $relatedSchema->columns[$column->name] = $column;
                         }
                         //$table->relations[$column->relationName][1][$column->name] = $column;
-                    }
-                    elseif ( !isset( $tableSchema->columns[$column->name]) ) {
+                    } elseif (!isset($tableSchema->columns[$column->name])) {
                         $tableSchema->columns[$column->name] = $column;
                     }
                 }
 
-                $table->relations[$relationName] = $tableSchema ;
+                $table->relations[$relationName] = $tableSchema;
             }
         }
     }
-     
-     /**
+
+    /**
      * Extracts the PHP type from abstract DB type.
      * @param string $type the column schema information
      * @return string PHP type name
@@ -361,12 +366,12 @@ class Schema extends \yii\db\Schema
             'timestamp' => 'timestamp',
         ];
         if (isset($typeMap[$type])) {
-           return $typeMap[$type];
+            return $typeMap[$type];
         } else {
             return 'string';
         }
     }
-    
+
     /**
      * @return ColumnSchema
      * @throws \yii\base\InvalidConfigException
@@ -375,7 +380,7 @@ class Schema extends \yii\db\Schema
     {
         return Yii::createObject('airmoi\yii2fmconnector\api\ColumnSchema');
     }
-    
+
     /**
      * Returns the ID of the last inserted row or sequence value.
      * @param string $sequenceName name of the sequence object (required by some DBMS)
@@ -387,7 +392,7 @@ class Schema extends \yii\db\Schema
     {
         throw new InvalidCallException('getLastInsertID is not supported by FileMaker PHP-API.');
     }
-    
+
     /**
      * Executes the INSERT command, returning primary key values.
      * @param string $table the table that new rows will be inserted into.
@@ -398,19 +403,19 @@ class Schema extends \yii\db\Schema
     public function insert($table, $columns)
     {
         $command = $this->db->newAddCommand($table, $columns);
-        
+
         if (!$result = $command->execute()) {
             return false;
         }
-        
+
         $record = $result->getFirstRecord();
-        
+
         $result = [];
-        foreach ($tableSchema->primaryKey as $name) {  
-                $result[$name] = $record->getRecordId();
-        }
+        /* ($tableSchema->primaryKey as $name) {
+            $result[$name] = $record->getRecordId();
+        }*/
         return $record->getRecordId();
-        
+
         /*$command = $this->db->createCommand()->insert($table, $columns);
         $tableSchema = $this->getTableSchema($table);
         $result = [];

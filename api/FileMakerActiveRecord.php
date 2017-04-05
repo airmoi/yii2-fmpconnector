@@ -1,96 +1,107 @@
 <?php
+/**
+ * @copyright 2016 Romain Dunand
+ * @license MIT https://github.com/airmoi/yii2-fmpconnector/blob/master/LICENSE
+ * @link https://github.com/airmoi/yii2-fmpconnector
+ */
+
 namespace airmoi\yii2fmconnector\api;
 
+use airmoi\FileMaker\FileMakerException;
+use airmoi\FileMaker\Object\Layout;
+use airmoi\FileMaker\Object\Record;
 use yii;
-use yii\base\Model;
+use yii\db\Exception;
+use yii\db\BaseActiveRecord;
+use yii\base\InvalidConfigException;
 use yii\helpers\ArrayHelper;
-
+use yii\base\NotSupportedException;
 
 /**
  * Description of FileMakerModel
- *
- * @author romain
  */
-class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
+class FileMakerActiveRecord extends BaseActiveRecord
 {
     /**
-    * @var string the default layout used to retrieve records
-    */
+     * @var string the default layout used to retrieve records
+     */
     public static $defaultLayout;
-    
+
     /**
      *
-     * @var \airmoi\FileMaker\Object\Layout 
+     * @var \airmoi\FileMaker\Object\Layout
      */
     protected static $_layout;
-    
+
     /**
      *
-     * @var array 
+     * @var array
      */
-    protected static $_attributesList; 
-    
+    protected static $_attributesList;
+
     /**
      * @var \airmoi\FileMaker\Object\Field[]
      */
     protected static $_attributesProperties;
-    
+
     /**
      * Wether this model represent records from a portal view
-     * @var bool 
+     * @var bool
      */
     public $isPortal = false;
 
     /**
      *
-     * @var array 
+     * @var array
      */
-    protected $_attributes; 
-    
-    
+    protected $_attributes;
+
+
     /**
      *
-     * @var \airmoi\FileMaker\Object\Record 
+     * @var \airmoi\FileMaker\Object\Record
      */
     protected $_record;
-    
+
     /**
      * Globals to be set on update/save queries
-     * @var array array of fieldName => value 
+     * @var array array of fieldName => value
      */
-    private $_globals = [];   
-    
+    private $_globals = [];
+
     /**
-     * the parent record instance when Model is a related record 
+     * the parent record instance when Model is a related record
      * @var FileMakerActiveRecord
      */
     private $_parent;
-    
-    
-     
-    
-    public function __get($name) {
-        if(preg_match('/^(\w+)\[(\d+)\]/', $name, $matches)){
+
+
+    public function __get($name)
+    {
+        if (preg_match('/^(\w+)\[(\d+)\]/', $name, $matches)) {
             return parent::__get($matches[1])[$matches[2]];
         } else {
             return parent::__get($name);
         }
     }
-    /** 
-     * @return Connection the database connection used by this AR class. 
-     */ 
-    public static function getDb() 
-    { 
-        return Yii::$app->db; 
-    } 
+
     /**
-     * 
-     * @return string[] 
+     * @return Connection the database connection used by this AR class.
      */
-    public static function primaryKey(){
+    public static function getDb()
+    {
+        return Yii::$app->db;
+    }
+
+    /**
+     *
+     * @return string[]
+     */
+    public static function primaryKey()
+    {
         return ['_recid'];
     }
-    
+
     /**
      * Returns the list of all attribute names of the model.
      * The default implementation will return all column names of the table associated with this AR class.
@@ -100,14 +111,35 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     {
         return array_keys($this->getDb()->getTableSchema($this->layoutName())->columns);
     }
-    
-    public function getAttributeLabel($attribute) {
-        if(preg_match('/^(\w+)\[(\d+)\]/', $attribute, $matches)){
+
+    /**
+     * Extend afterFind to trigger afterFind in related Records
+     *
+     * @inheritdoc
+     */
+    public function afterFind()
+    {
+        parent::afterFind();
+        foreach ($this->getRelatedRecords() as $relation) {
+            if (is_array($relation)) {
+                foreach ($relation as $record) {
+                    $record->afterFind();
+                }
+            } else {
+                $relation->afterFind();
+            }
+        }
+    }
+
+
+    public function getAttributeLabel($attribute)
+    {
+        if (preg_match('/^(\w+)\[(\d+)\]/', $attribute, $matches)) {
             $attribute = $matches[1];
         }
         return parent::getAttributeLabel($attribute);
     }
-    
+
     /**
      * @inheritdoc
      * @return ActiveFind the newly created [[ActiveFind]] instance.
@@ -115,12 +147,12 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     public static function find($layout = null)
     {
         $query = Yii::createObject(ActiveFind::className(), [get_called_class()]);
-        if ($layout !== null){
+        if ($layout !== null) {
             $query->resultLayout = $layout;
         }
         return $query;
     }
-    
+
     /**
      * @inheritdoc
      * @return static[]
@@ -131,7 +163,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         $query->andWhere($condition);
         return $query->all();
     }
-    
+
     /**
      * @inheritdoc
      * @return \airmoi\FileMaker\Command\Find the newly created [[Find]] instance.
@@ -140,21 +172,23 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     {
         return static::getDb()->newCompoundFindCommand(static::layoutName());
     }
-    
+
     /**
-     * 
+     *
      * @param mixed $condition primary key value or a set of column values
+     * @param string|null $layout
      * @return static ActiveRecord instance matching the condition, or null if nothing matches.
-     * @throws \yii\web\HttpException
+     * @throws \Exception
      */
-    public static function findOne($condition, $layout = null){
-        if(!ArrayHelper::isAssociative($condition)) {
+    public static function findOne($condition, $layout = null)
+    {
+        if (!ArrayHelper::isAssociative($condition)) {
             return static::find($layout)->getRecordById($condition);
         }
 
         return static::find($layout)->andWhere($condition)->one();
     }
-    
+
     /**
      * Deletes the table row corresponding to this active record.
      *
@@ -175,92 +209,101 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      */
     public function delete()
     {
-        $recordId = $this->_recid;
+        $recordId = $this->getRecId();
         $command = static::getDb()->newDeleteCommand(static::$defaultLayout, $recordId);
         try {
-            $result = $command->execute();
+            $command->execute();
             return 1;
-        } catch (\airmoi\FileMaker\FileMakerException $e) {
+        } catch (FileMakerException $e) {
             $this->addError('delete', $e->getMessage());
             return 0;
         }
     }
-    
+
     /**
      * @return string default FileMaker layout used by this model
+     * @throws NotSupportedException
      */
-    public static function layoutName() {
-        if(static::$defaultLayout === null) {
-            throw new \yii\base\NotSupportedException('defaultLayout property must be set in model');
+    public static function layoutName()
+    {
+        if (static::$defaultLayout === null) {
+            throw new NotSupportedException('defaultLayout property must be set in model');
         }
         return static::$defaultLayout;
     }
-    
+
     /**
      * Map value lists associated with fields
      * @return array associative array (field => valueListName)
      * @throws \yii\base\NotSupportedException
      */
-    public function attributeValueLists() {
-        throw new \yii\base\NotSupportedException('attributeValueLists Method should be overidded');
+    public function attributeValueLists()
+    {
+        throw new NotSupportedException('attributeValueLists Method should be overidded');
     }
-    
+
     /**
      * @var string default FileMaker layout to be used for search queries
+     * @return string
      */
-    public static function searchLayoutName() {
+    public static function searchLayoutName()
+    {
         return static::layoutName();
     }
-    
+
     /**
      * get filename of a container attribute
      * @param string $url the container url
      * @return string the filename
      */
-    public static function getContainerFileName($url) {
+    public static function getContainerFileName($url)
+    {
         $name = basename($url);
         return substr($name, 0, strpos($name, "?"));
     }
-    
+
     /**
      * Return the layout Object used by this model
      * @return Layout
      */
-    public static function getLayout() {
-        if(!isset(static::$_layout[static::layoutName()])) {
-            $fm = static::getDb();
-            static::$_layout[static::layoutName()] = $fm->getLayout(static::layoutName());
+    public static function getLayout()
+    {
+        if (!isset(static::$_layout[static::layoutName()])) {
+            $connection = static::getDb();
+            static::$_layout[static::layoutName()] = $connection->getLayout(static::layoutName());
         }
         return static::$_layout[static::layoutName()];
     }
 
     /**
      * Returns the schema information of the DB table associated with this AR class.
+     * @param string $layout
      * @return TableSchema the schema information of the DB table associated with this AR class.
      * @throws InvalidConfigException if the table for the AR class does not exist.
      */
-    public static function getTableSchema()
+    public static function getTableSchema($layout = null)
     {
-        $schema = static::getDb()->getTableSchema(static::layoutName());
+        $schema = static::getDb()->getTableSchema($layout == null ? static::layoutName() : $layout);
         if ($schema !== null) {
             return $schema;
         } else {
             throw new InvalidConfigException("The table does not exist: " . static::layoutName());
         }
     }
-    
-    
-    public function load($data, $formName = NULL ) {
-        $loaded = (int) parent::load($data, $formName);
-        
-        foreach ($this->getRelatedRecords() as $relationName => $records) {
-            if($records instanceof FileMakerRelatedRecord && !$records->isPortal){
+
+
+    public function load($data, $formName = null)
+    {
+        $loaded = (int)parent::load($data, $formName);
+
+        foreach ($this->getRelatedRecords() as $records) {
+            if ($records instanceof FileMakerRelatedRecord && !$records->isPortal) {
                 $loaded += (int)$records->load($data);
             }
         }
         return $loaded > 0;
     }
-    
+
     /**
      * Inserts a row into the associated database table using the attribute values of this record.
      *
@@ -307,121 +350,134 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
             Yii::info('Model not inserted due to validation error.', __METHOD__);
             return false;
         }
-        
+
         if (!$this->beforeSave(true)) {
             return false;
         }
-        
+
         try {
-           $values = $this->getDirtyAttributes();
-           $fm = static::getDb();
-           $request = $fm->newAddCommand(static::layoutName(), $values);
-           
-           foreach($this->_globals as $fieldName => $fieldValue) {
-               $request->setGlobal($fieldName, $fieldValue);
-           }
-           $result = $request->execute();
-           $this->_recid = $result->getFirstRecord()->getRecordId();
-           self::populateRecordFromFm($this, $result->getFirstRecord());
-           
-           $this->afterSave(true, $values);
-           return true;
+            $values = $this->getDirtyAttributes();
+            $connection = static::getDb();
+            $request = $connection->newAddCommand(static::layoutName(), $values);
+
+            foreach ($this->_globals as $fieldName => $fieldValue) {
+                $request->setGlobal($fieldName, $fieldValue);
+            }
+            $result = $request->execute();
+            $this->_recid = $result->getFirstRecord()->getRecordId();
+            self::populateRecordFromFm($this, $result->getFirstRecord());
+
+            $this->afterSave(true, $values);
+            return true;
         } catch (\Exception $e) {
             throw $e;
         }
     }
-    
+
     /**
-     * 
-     * @param \airmoi\yii2fmconnector\api\FileMakerModel $record
-     * @param \airmoi\FileMaker\Object\Record $fmRecord
+     *
+     * @param FileMakerActiveRecord $record
+     * @param Record $fmRecord
      * @return self
      */
-    public static function populateRecordFromFm(FileMakerActiveRecord $record, \airmoi\FileMaker\Object\Record $fmRecord){
+    public static function populateRecordFromFm(FileMakerActiveRecord $record, Record $fmRecord)
+    {
         $record->_record = $fmRecord;
-        $tableSchema = $record->isPortal ? static::getDb()->getTableSchema(static::layoutName())->relations[$record->relationName] : static::getDb()->getTableSchema(static::layoutName());
-        
-        /* @var $tableSchema airmoi\yii2fmconnector\api\TableSchema */
+        if ($record->isPortal) {
+            $tableSchema =  static::getDb()->getTableSchema(static::layoutName())->relations[$record->relationName];
+        } else {
+            $tableSchema = static::getDb()->getTableSchema(static::layoutName());
+        }
+
+        /* @var $tableSchema TableSchema */
         $row = [];
         $attributePrefix = $record->isPortal ? $record->tableOccurence . '::' : '';
-        foreach ($record->attributes() as $attribute){
-            if($tableSchema->columns[$attribute]->maxRepeat > 1){
+        foreach ($record->attributes() as $attribute) {
+            if ($tableSchema->columns[$attribute]->maxRepeat > 1) {
                 $row[$attribute] = [];
                 for ($i = 0; $i <= $tableSchema->columns[$attribute]->maxRepeat; $i++) {
-                    $row[$attribute][$i] = $fmRecord->getField($attributePrefix.$attribute, $i);
+                    $row[$attribute][$i] = $fmRecord->getField($attributePrefix . $attribute, $i);
                 }
             } else {
-                $row[$attribute] = $fmRecord->getField($attributePrefix.$attribute);
+                $row[$attribute] = $fmRecord->getField($attributePrefix . $attribute);
             }
         }
-        
+
         $row['_recid'] = $fmRecord->getRecordId();
         parent::populateRecord($record, $row);
-        
+
         //Populate relations
-        foreach ( $tableSchema->relations as $relationName => $schema){
+        foreach ($tableSchema->relations as $relationName => $schema) {
             $fields = $fmRecord->getLayout()->listFields();
-            $filter = array_filter($fmRecord->getLayout()->listFields(), function($field) use ($relationName) { 
-                return strpos($field, $relationName) !== false;       
+            $filter = array_filter($fields, function ($field) use ($relationName) {
+                return strpos($field, $relationName) !== false;
             });
-            if( !$schema->isPortal && sizeof($filter)){
+            if (!$schema->isPortal && sizeof($filter)) {
                 $record->populateHasOneRelation($relationName, $schema, $fmRecord);
-            }
-            elseif ($fmRecord->getLayout()->hasRelatedSet($schema->name)) {
+            } elseif ($fmRecord->getLayout()->hasRelatedSet($schema->name)) {
                 $record->populateHasManyRelation($relationName, $schema, $fmRecord);
             }
         }
 
         return $record;
     }
-    
+
     /**
-     * 
+     *
      * @param string $relationName
      * @param TableSchema $tableSchema
-     * @param \airmoi\FileMaker\Object\Record $record
+     * @param Record $record
      */
-    protected function populateHasOneRelation( $relationName, TableSchema $tableSchema, \airmoi\FileMaker\Object\Record $record) {
+    protected function populateHasOneRelation($relationName, TableSchema $tableSchema, Record $record)
+    {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
-        
-        if(!class_exists($modelClass)){
+
+        if (!class_exists($modelClass)) {
             \Yii::error("relation's model class $modelClass is missing", 'FileMaker.fmConnector');
             return;
         }
         $model = $modelClass::instantiate([]);
         $model->_parent = $this;
-        \Yii::configure($model, ['isPortal' => false, 'relationName' =>$relationName, 'tableOccurence' => $tableSchema->name]);
-        
-        
+        \Yii::configure(
+            $model,
+            [
+                'isPortal' => false,
+                'relationName' => $relationName,
+                'tableOccurence' => $tableSchema->name
+            ]
+        );
+
+
         $row = [];
-        foreach ( $tableSchema->columns as $fieldName => $config){
+        foreach (array_keys($tableSchema->columns) as $fieldName) {
             $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
         }
-        
+
         parent::populateRecord($model, $row);
-        
+
         $this->populateRelation($relationName, $model);
     }
-    
+
     /**
-     * 
-     * @param type $relationName
-     * @param type $record
-     * @return boolean
+     *
+     * @param string $relationName
+     * @param Record|null $record
+     * @return null|FileMakerActiveRecord
      */
-    public function newRelatedRecord( $relationName, $record = null ) {
+    public function newRelatedRecord($relationName, $record = null)
+    {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
-        
-        
-        if(!class_exists($modelClass)){
+
+
+        if (!class_exists($modelClass)) {
             \Yii::error("relation's model class $modelClass is missing", 'FileMaker.fmConnector');
-            return;
+            return null;
         }
-        
-        $tableSchema = static::getDb()->getTableSchema(static::layoutName())->relations[$relationName];
-        $model = $modelClass::instantiate([]); 
-        
-        if($record === null && $this->_record !== null){
+
+        $tableSchema = static::getDb()->getTableSchema(self::layoutName())->relations[$relationName];
+        $model = $modelClass::instantiate([]);
+
+        if ($record === null && $this->_record !== null) {
             $record = $this->_record->newRelatedRecord($tableSchema->name);
         }
         $model->_record = $record;
@@ -430,90 +486,96 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         $model->relationName = $relationName;
         $model->tableOccurence = $tableSchema->name;
         //\Yii::configure($model, ['isPortal' => true, 'parent' => $this, 'relationName' => $relationName, '' => ]);
-        
+
         return $model;
     }
-    
+
     /**
-     * 
+     *
      * @param string $relationName
-     * @param ColumnSchema[] $fields
-     * @param \airmoi\FileMaker\Object\Record $record
+     * @param TableSchema $tableSchema
+     * @param Record $record
+     * @internal param ColumnSchema[] $fields
      */
-    protected function populateHasManyRelation( $relationName, TableSchema $tableSchema, \airmoi\FileMaker\Object\Record $record) {
+    protected function populateHasManyRelation($relationName, TableSchema $tableSchema, Record $record)
+    {
         $modelClass = substr(get_called_class(), 0, strrpos(get_called_class(), '\\')) . '\\' . ucfirst($relationName);
-        
-        if(!class_exists($modelClass)){
-            \Yii::error($modelClass . ' does not exists' , 'FileMaker.fmConnector');
+
+        if (!class_exists($modelClass)) {
+            \Yii::error($modelClass . ' does not exists', 'FileMaker.fmConnector');
             return;
         }
-        
+
         try {
             $records = $record->getRelatedSet($tableSchema->name);
-        } catch (\Exception $e){
+        } catch (\Exception $e) {
             return;
         }
         $models = [];
-        
-        foreach ( $records as $record ){
+
+        foreach ($records as $record) {
             $model = $this->newRelatedRecord($relationName, $record);
             self::populateRecordFromFm($model, $record);
             $models[$record->getRecordId()] = $model;
         }
-        
+
         $this->populateRelation($relationName, $models);
     }
-    
+
     /**
      * Return the parent record if model represents a related record
      * @return FileMakerActiveRecord
      */
-    public function parentRecord() {
+    public function parentRecord()
+    {
         return $this->_parent;
     }
-    
+
     /**
      * return the FileMaker RecordID of the model
      * @return int
      */
-    public function getRecId(){
+    public function getRecId()
+    {
         return $this->_recid;
     }
-    
+
     /**
      * Add a global to be defined on update/create queries
      * @param string $fieldName
      * @param string $fieldValue
      * @return static
      */
-    public function addGlobal($fieldName, $fieldValue) {
+    public function addGlobal($fieldName, $fieldValue)
+    {
         $this->_globals[$fieldName] = $fieldValue;
         return $this;
     }
-    
+
     /**
      * Delete à defined global
      * @param string $fieldName
      * @return static
      */
-    public function deleteGlobal($fieldName) {
+    public function deleteGlobal($fieldName)
+    {
         unset($this->_globals[$fieldName]);
         return $this;
     }
-    
-    
-    
+
+
     /**
      * Delete all globals sets
      * @return static
      */
-    public function resetGlobals() {
+    public function resetGlobals()
+    {
         $this->_globals = [];
         return $this;
     }
-    
+
     /**
-     * 
+     *
      * @param boolean $runValidation whether to perform validation (calling [[validate()]])
      * before saving the record. Defaults to `true`. If the validation fails, the record
      * will not be saved to the database and this method will return `false`.
@@ -521,7 +583,7 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
      * meaning all attributes that are loaded from DB will be saved.
      * @return integer|boolean the number of rows affected, or false if validation fails
      * or [[beforeSave()]] stops the updating process.
-     * @throws StaleObjectException if [[optimisticLock|optimistic locking]] is enabled and the data
+     * @throws yii\db\StaleObjectException if [[optimisticLock|optimistic locking]] is enabled and the data
      * being updated is outdated.
      * @throws Exception in case update failed.
      */
@@ -533,39 +595,39 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
         if ($runValidation && !$this->validate($attributeNames)) {
             return false;
         }
-        
+
         $values = $this->getDirtyAttributes($attributeNames);
-        if( empty($values) ){
+        if (empty($values)) {
             //$this->addError('general', \Yii::t('app', 'Nothing to update'));
             $this->afterSave(false, $values);
             return true;
         }
         try {
-           $token = 'update '.__CLASS__ . ' '.$this->getRecId();
-           Yii::beginProfile($token, 'yii\db\Command::query');
-           $fm = static::getDb();
-           $request = $fm->newEditCommand(static::layoutName(), $this->getRecId(), $values);
-           
-           foreach($this->_globals as $fieldName => $fieldValue) {
-               $request->setGlobal($fieldName, $fieldValue);
-           }
-           
-           $request->execute();
-           
-           $this->afterSave(false, $values);
-           
-            Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
+            $token = 'update ' . __CLASS__ . ' ' . $this->getRecId();
+            Yii::beginProfile($token, 'yii\db\Command::query');
+            $connection = static::getDb();
+            $request = $connection->newEditCommand(static::layoutName(), $this->getRecId(), $values);
+
+            foreach ($this->_globals as $fieldName => $fieldValue) {
+                $request->setGlobal($fieldName, $fieldValue);
+            }
+
+            $request->execute();
+
+            $this->afterSave(false, $values);
+
+            Yii::info($this->getDb()->getLastRequestedUrl(), __METHOD__);
             Yii::endProfile($token, 'yii\db\Command::query');
-           return 1;
+            return 1;
         } catch (\Exception $e) {
-            Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
+            Yii::info($this->getDb()->getLastRequestedUrl(), __METHOD__);
             Yii::endProfile($token, 'yii\db\Command::query');
             $this->addError('', $e->getMessage());
             return false;
-            throw new \yii\db\Exception($e->getMessage() . '(' . $e->getCode() . ')', $e->getCode());
+            //throw new Exception($e->getMessage() . '(' . $e->getCode() . ')', $e->getCode());
         }
     }
-    
+
     /**
      * Returns the attribute values that have been modified since they are loaded or saved most recently.
      * @param string[]|null $names the names of the attributes whose values may be returned if they are
@@ -575,91 +637,93 @@ class FileMakerActiveRecord extends \yii\db\BaseActiveRecord
     public function getDirtyAttributes($names = null)
     {
         $values = parent::getDirtyAttributes($names);
-        
+
         //Get updated related records values that are not in portals
-        foreach ( $this->getRelatedRecords() as $relationName => $records ){
-            if ( $records instanceof FileMakerRelatedRecord){
+        foreach ($this->getRelatedRecords() as $records) {
+            if ($records instanceof FileMakerRelatedRecord) {
                 $values = ArrayHelper::merge($values, $records->getDirtyAttributes($names));
             }
         }
-        
+
         return $values;
     }
-    
-    public function valueList($attribute, $byRecId = false, $layoutName = null ) {
-        if ( !array_key_exists($attribute, $this->attributeValueLists()) ){
+
+    public function valueList($attribute, $byRecId = false, $layoutName = null)
+    {
+        if (!array_key_exists($attribute, $this->attributeValueLists())) {
             return [];
         }
-        if($layoutName === null){
-            if( $this->parentRecord() !== null ) {
-                $layoutName = $this->parentRecord()->LayoutName(); 
+        if ($layoutName === null) {
+            if ($this->parentRecord() !== null) {
+                $layoutName = $this->parentRecord()->layoutName();
             } else {
                 $layoutName = $this->layoutName();
             }
         }
         $valueList = $this->attributeValueLists()[$attribute];
-        if(is_array($valueList)) {
+        if (is_array($valueList)) {
             return $valueList;
         }
         $layout = static::getDb()->getSchema()->getlayout($layoutName);
-        $recid = $this->parentRecord() !== null ? $this->parentRecord()->getRecid() : $this->getRecId();
-        
+        $recid = $this->parentRecord() !== null ? $this->parentRecord()->getRecId() : $this->getRecId();
+
         return array_flip($layout->getValueListTwoFields($valueList, $byRecId ? $recid : null));
     }
-    
-    public function getFriendlyAttributeValue($attribute ) {
-        if ( !array_key_exists($attribute, $this->attributeValueLists()) ){
+
+    public function getFriendlyAttributeValue($attribute)
+    {
+        if (!array_key_exists($attribute, $this->attributeValueLists())) {
             return $this->$attribute;
         }
         $list = $this->valueList($attribute);
-        if(!isset($list[$this->$attribute])){
+        if (!isset($list[$this->$attribute])) {
             return $this->$attribute;
         }
-        
+
         return $list[$this->$attribute];
     }
-    
-    
-    
-    public static function encryptContainerUrl($url) {
-        $user = Yii::$app->user;
-        $request = Yii::$app->request;
+
+
+    public static function encryptContainerUrl($url)
+    {
         return base64_encode(Yii::$app->security->encryptByKey($url, get_called_class()));
     }
-    
-    public static function decryptContainerUrl($encryptedUrl) {
+
+    public static function decryptContainerUrl($encryptedUrl)
+    {
         return Yii::$app->security->decryptByKey(base64_decode($encryptedUrl), get_called_class());
     }
 }
 
-class FileMakerRelatedRecord extends FileMakerActiveRecord 
+class FileMakerRelatedRecord extends FileMakerActiveRecord
 {
-    
+
     /**
      * Name of the relation
      * @var string
      */
     public $relationName;
-    
+
     /**
      * Name of the FileMaker table occurrence the related record is based on
      * @return string
      */
     public $tableOccurence;
-    
-    public function parentLayoutName() {
+
+    public function parentLayoutName()
+    {
         return $this->parentRecord()->layoutName();
     }
-    
-    public function getTableSchemaFromParent($layout = null) {
-        if($this->parentRecord()->isPortal){
+
+    public function getTableSchemaFromParent($layout = null)
+    {
+        if ($this->parentRecord()->isPortal) {
             return $this->parentRecord()->getTableSchemaFromParent($layout)->relations[$this->relationName];
-        }
-        else {
+        } else {
             return $this->parentRecord()->getTableSchema($layout)->relations[$this->relationName];
         }
     }
-    
+
     /**
      * Returns the list of all attribute names of the model.
      * The default implementation will return all column names of the table associated with this AR class.
@@ -671,30 +735,30 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
         $keys = array_keys($relationSchema->columns);
         return $keys;
     }
-    
-    
-    public function insert($runValidation = true, $attributes = null) { 
+
+
+    public function insert($runValidation = true, $attributes = null)
+    {
         if ($runValidation && !$this->validate($attributes)) {
             return false;
         }
-        
-        if(!$this->isPortal){
-            return $this->parentRecord()->insert($runValidation, $attributeNames);
-        }  else {
+
+        if (!$this->isPortal) {
+            return $this->parentRecord()->insert($runValidation, $attributes);
+        } else {
             $values = $this->getDirtyAttributes();
-            foreach ( $values as $field => $value ){
+            foreach ($values as $field => $value) {
                 $this->_record->setField($field, $value);
             }
-            
-           $token = 'insert '.__CLASS__ . ' '.$this->getRecId();
-           Yii::beginProfile($token, 'yii\db\Command::query');
-           try {
+
+            $token = 'insert ' . __CLASS__ . ' ' . $this->getRecId();
+            Yii::beginProfile($token, 'yii\db\Command::query');
+            try {
                 $this->_record->commit();
                 Yii::info($this->parentRecord()->getDb()->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($token, 'yii\db\Command::query');
                 return 1;
-           }
-           catch ( \Exception $e) {
+            } catch (\Exception $e) {
                 $this->addError('general', $e->getMessage());
                 Yii::info($this->parentRecord()->getDb()->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($token, 'yii\db\Command::query');
@@ -702,30 +766,29 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
             }
         }
     }
-    
+
     public function update($runValidation = true, $attributeNames = null)
     {
         if ($runValidation && !$this->validate($attributeNames)) {
             return false;
         }
-        
-        if(!$this->isPortal){
+
+        if (!$this->isPortal) {
             return $this->parentRecord()->update($runValidation, $attributeNames);
         } else {
             $values = $this->getDirtyAttributes();
-            foreach ( $values as $field => $value ){
+            foreach ($values as $field => $value) {
                 $this->_record->setField($field, $value);
             }
-            
-           $token = 'update '.__CLASS__ . ' '.$this->getRecId();
-           Yii::beginProfile($token, 'yii\db\Command::query');
-           try {
+
+            $token = 'update ' . __CLASS__ . ' ' . $this->getRecId();
+            Yii::beginProfile($token, 'yii\db\Command::query');
+            try {
                 $this->_record->commit();
                 Yii::info($this->getDb()->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($token, 'yii\db\Command::query');
                 return 1;
-           }
-           catch ( \Exception $e) {
+            } catch (\Exception $e) {
                 $this->addError('general', $e->getMessage());
                 Yii::info($this->getDb()->getLastRequestedUrl(), __METHOD__);
                 Yii::endProfile($token, 'yii\db\Command::query');
@@ -733,7 +796,7 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
             }
         }
     }
-    
+
     /**
      * Returns the attribute values that have been modified since they are loaded or saved most recently.
      * Prefix the relation tableName to field names
@@ -744,12 +807,12 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
     public function getDirtyAttributes($names = null)
     {
         $values = parent::getDirtyAttributes($names);
-        
+
         $prefixedValues = [];
-        foreach ( $values as $field => $value ){
-            $prefixedValues[$this->tableOccurence.'::'.$field] = $value;
+        foreach ($values as $field => $value) {
+            $prefixedValues[$this->tableOccurence . '::' . $field] = $value;
         }
-        
+
         return $prefixedValues;
     }
 }
