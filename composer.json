@@ -10,9 +10,11 @@
             "email": "airmoi@gmail.com"
         }
     ],
+    "minimum-stability": "beta",
+    "prefer-stable" : true,
     "require": {
-        "yiisoft/yii2": "*",
-        "airmoi/filemaker": "2.0.*"
+        "yiisoft/yii2": "*@stable",
+        "airmoi/filemaker": "dev-develop"
     },
     "autoload": {
         "psr-4": {
