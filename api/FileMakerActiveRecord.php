@@ -106,6 +106,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
      * Returns the list of all attribute names of the model.
      * The default implementation will return all column names of the table associated with this AR class.
      * @return array list of attribute names.
+     * @throws NotSupportedException
      */
     public function attributes()
     {
@@ -166,7 +167,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
 
     /**
      * @inheritdoc
-     * @return \airmoi\FileMaker\Command\Find the newly created [[Find]] instance.
+     * @return \airmoi\FileMaker\Command\CompoundFind the newly created [[Find]] instance.
      */
     public static function compoundFind()
     {
@@ -204,7 +205,6 @@ class FileMakerActiveRecord extends BaseActiveRecord
      *
      * @return integer|false the number of rows deleted, or false if the deletion is unsuccessful for some reason.
      * Note that it is possible the number of rows deleted is 0, even though the deletion execution is successful.
-     * @throws FileMakerException
      * @throws \Exception in case delete failed.
      */
     public function delete()
@@ -245,6 +245,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
     /**
      * @var string default FileMaker layout to be used for search queries
      * @return string
+     * @throws NotSupportedException
      */
     public static function searchLayoutName()
     {
@@ -265,6 +266,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
     /**
      * Return the layout Object used by this model
      * @return Layout
+     * @throws NotSupportedException
      */
     public static function getLayout()
     {
@@ -280,6 +282,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
      * @param string $layout
      * @return TableSchema the schema information of the DB table associated with this AR class.
      * @throws InvalidConfigException if the table for the AR class does not exist.
+     * @throws NotSupportedException
      */
     public static function getTableSchema($layout = null)
     {
@@ -379,6 +382,8 @@ class FileMakerActiveRecord extends BaseActiveRecord
      * @param FileMakerActiveRecord $record
      * @param Record $fmRecord
      * @return self
+     * @throws FileMakerException
+     * @throws NotSupportedException
      */
     public static function populateRecordFromFm(FileMakerActiveRecord $record, Record $fmRecord)
     {
@@ -427,6 +432,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
      * @param string $relationName
      * @param TableSchema $tableSchema
      * @param Record $record
+     * @throws FileMakerException
      */
     protected function populateHasOneRelation($relationName, TableSchema $tableSchema, Record $record)
     {
@@ -463,6 +469,8 @@ class FileMakerActiveRecord extends BaseActiveRecord
      * @param string $relationName
      * @param Record|null $record
      * @return null|FileMakerActiveRecord
+     * @throws FileMakerException
+     * @throws NotSupportedException
      */
     public function newRelatedRecord($relationName, $record = null)
     {
@@ -495,6 +503,8 @@ class FileMakerActiveRecord extends BaseActiveRecord
      * @param string $relationName
      * @param TableSchema $tableSchema
      * @param Record $record
+     * @throws FileMakerException
+     * @throws NotSupportedException
      * @internal param ColumnSchema[] $fields
      */
     protected function populateHasManyRelation($relationName, TableSchema $tableSchema, Record $record)
@@ -524,7 +534,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
 
     /**
      * Return the parent record if model represents a related record
-     * @return FileMakerActiveRecord
+     * @return FileMakerActiveRecord|FileMakerRelatedRecord
      */
     public function parentRecord()
     {
@@ -648,6 +658,15 @@ class FileMakerActiveRecord extends BaseActiveRecord
         return $values;
     }
 
+    /**
+     * @param $attribute
+     * @param bool $byRecId
+     * @param null $layoutName
+     * @return array|mixed|null
+     * @throws FileMakerException
+     * @throws NotSupportedException
+     * @throws \Exception
+     */
     public function valueList($attribute, $byRecId = false, $layoutName = null)
     {
         if (!array_key_exists($attribute, $this->attributeValueLists())) {
@@ -670,6 +689,46 @@ class FileMakerActiveRecord extends BaseActiveRecord
         return array_flip($layout->getValueListTwoFields($valueList, $byRecId ? $recid : null));
     }
 
+    /**
+     * Repopulates this active record with the latest data.
+     *
+     * If the refresh is successful, an [[EVENT_AFTER_REFRESH]] event will be triggered.
+     * This event is available since version 2.0.8.
+     *
+     * @return bool whether the row still exists in the database. If `true`, the latest data
+     * will be populated to this active record. Otherwise, this record will remain unchanged.
+     * @throws \Exception
+     */
+    public function refresh()
+    {
+        /* @var $record BaseActiveRecord */
+        $record = static::findOne($this->getPrimaryKey(true));
+        if ($record === null) {
+            return false;
+        }
+        foreach ($this->attributes() as $name) {
+            $this->_attributes[$name] = $record->hasAttribute($name) ? $record->getAttribute($name) : null;
+        }
+        $this->setOldAttributes($record->getOldAttributes());
+
+
+        foreach ($record->getRelatedRecords() as $relationName => $records) {
+            $this->populateRelation($relationName, $records);
+        }
+        $this->afterRefresh();
+
+        return true;
+    }
+
+    /**
+     * Return an attribute's "Friendly Value" according to its associated value list
+     *
+     * @param $attribute
+     * @return mixed
+     * @throws FileMakerException
+     * @throws NotSupportedException
+     * @throws \Exception
+     */
     public function getFriendlyAttributeValue($attribute)
     {
         if (!array_key_exists($attribute, $this->attributeValueLists())) {
@@ -710,6 +769,11 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
      */
     public $tableOccurence;
 
+    /**
+     * @return string
+     * @throws NotSupportedException
+     * @throws InvalidConfigException if the table for the AR class does not exist.
+     */
     public function parentLayoutName()
     {
         return $this->parentRecord()->layoutName();
@@ -737,6 +801,13 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
     }
 
 
+    /**
+     * @param bool $runValidation
+     * @param null $attributes
+     * @return bool|int
+     * @throws FileMakerException
+     * @throws \Exception
+     */
     public function insert($runValidation = true, $attributes = null)
     {
         if ($runValidation && !$this->validate($attributes)) {
@@ -767,6 +838,13 @@ class FileMakerRelatedRecord extends FileMakerActiveRecord
         }
     }
 
+    /**
+     * @param bool $runValidation
+     * @param null $attributeNames
+     * @return bool|int
+     * @throws \Exception
+     * @throws FileMakerException
+     */
     public function update($runValidation = true, $attributeNames = null)
     {
         if ($runValidation && !$this->validate($attributeNames)) {

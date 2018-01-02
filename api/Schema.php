@@ -95,7 +95,7 @@ class Schema extends \yii\db\Schema
      *
      * @param string $layoutName
      * @return Layout
-     * @throws Exception
+     * @throws \Exception
      */
     public function getlayout($layoutName)
     {
@@ -111,7 +111,7 @@ class Schema extends \yii\db\Schema
                 Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
             } catch (FileMakerException $e) {
                 Yii::endProfile($token, __METHOD__);
-                throw new Exception($e->getMessage(), (int)$e->getCode(), $e);
+                throw new \Exception($e->getMessage(), (int)$e->getCode(), $e);
             }
         }
         return $this->_layout[$layoutName];

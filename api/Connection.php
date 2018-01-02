@@ -17,6 +17,7 @@ use yii\base\UnknownMethodException;
  * @since 1.0
  *
  * @method Schema getSchema()
+ * @method TableSchema getTableSchema($name, $refresh = false)
  *
  * @method string getAPIVersion() Returns the version of the FileMaker API for PHP.
  * @method string getContainerData($url) Returns the data for the specified container field.
