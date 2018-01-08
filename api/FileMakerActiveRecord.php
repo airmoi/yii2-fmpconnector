@@ -702,7 +702,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
     public function refresh()
     {
         /* @var $record BaseActiveRecord */
-        $record = static::findOne($this->getPrimaryKey(true));
+        $record = static::findOne($this->getPrimaryKey(false));
         if ($record === null) {
             return false;
         }
