@@ -9,7 +9,6 @@ namespace airmoi\yii2fmconnector\api;
 
 use airmoi\FileMaker\FileMakerException;
 use yii;
-use airmoi\yii2fmconnector\api\ColumnSchema;
 use airmoi\FileMaker\FileMaker;
 use airmoi\FileMaker\Object\Field;
 use airmoi\FileMaker\Object\Layout;
@@ -45,7 +44,7 @@ class Schema extends \yii\db\Schema
      *
      * @var string
      */
-    public $layoutFiltterPattern = '/^PHP_.*/';
+    public $layoutFilterPattern = '/^PHP_.*/';
 
     /**
      * @var array mapping from physical column types (keys) to abstract column types (values)
@@ -76,6 +75,8 @@ class Schema extends \yii\db\Schema
      * Loads the metadata for the specified table.
      * @param string $name table name
      * @return TableSchema|null driver dependent table metadata. Null if the table does not exist.
+     * @throws \Exception
+     * @throws yii\base\InvalidConfigException
      */
     public function loadTableSchema($name)
     {
@@ -95,7 +96,7 @@ class Schema extends \yii\db\Schema
      *
      * @param string $layoutName
      * @return Layout
-     * @throws Exception
+     * @throws \Exception
      */
     public function getlayout($layoutName)
     {
@@ -111,7 +112,7 @@ class Schema extends \yii\db\Schema
                 Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
             } catch (FileMakerException $e) {
                 Yii::endProfile($token, __METHOD__);
-                throw new Exception($e->getMessage(), (int)$e->getCode(), $e);
+                throw new \Exception($e->getMessage(), (int)$e->getCode(), $e);
             }
         }
         return $this->_layout[$layoutName];
@@ -122,6 +123,7 @@ class Schema extends \yii\db\Schema
      * @param TableSchema $table the table metadata object
      * @param string $name the table name
      * @return string
+     * @throws \Exception
      */
     protected function resolveTableNames(TableSchema $table, $name)
     {
@@ -132,6 +134,10 @@ class Schema extends \yii\db\Schema
         return $name;
     }
 
+    /**
+     * @param TableSchema $table
+     * @throws \Exception
+     */
     public function findLayoutsFromSameTable(TableSchema $table)
     {
         $layouts = $this->findTableNames();
@@ -149,6 +155,7 @@ class Schema extends \yii\db\Schema
      * Loads the column information into a [[ColumnSchema]] object.
      * @param Field $field a FileMaker Field Object
      * @return ColumnSchema the column schema object
+     * @throws yii\base\InvalidConfigException
      */
     protected function loadColumnSchema(Field $field)
     {
@@ -198,6 +205,8 @@ class Schema extends \yii\db\Schema
      * Collects the metadata of table columns.
      * @param TableSchema $table the table metadata
      * @return boolean whether the table exists in the database
+     * @throws \Exception
+     * @throws yii\base\InvalidConfigException
      */
     protected function findColumns(TableSchema $table)
     {
@@ -252,7 +261,7 @@ class Schema extends \yii\db\Schema
      * Returns all table names in the database.
      * @param string $schema the schema of the tables. Defaults to empty string, meaning the current or default schema.
      * @return array all table names in the database. The names have NO schema name prefix.
-     * @throws Exception
+     * @throws \Exception
      */
     protected function findTableNames($schema = '')
     {
@@ -264,7 +273,7 @@ class Schema extends \yii\db\Schema
             Yii::info($token, __METHOD__);
             Yii::beginProfile($token, __METHOD__);
 
-            $filter = $this->layoutFiltterPattern;
+            $filter = $this->layoutFilterPattern;
             $layouts = array_filter($this->db->listLayouts(), function ($value) use ($filter) {
                 return preg_match($filter, $value);
             });
@@ -272,7 +281,7 @@ class Schema extends \yii\db\Schema
             Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
         } catch (FileMakerException $e) {
             Yii::endProfile($token, __METHOD__);
-            throw new Exception($e->getMessage(), $e->errorInfo, (int)$e->getCode(), $e);
+            throw new \Exception($e->getMessage(), (int)$e->getCode(), $e);
         }
         return $this->_layoutList;
     }
@@ -281,7 +290,7 @@ class Schema extends \yii\db\Schema
      * Collects the value lists names for the given layout.
      * @param TableSchema $table
      * @return array all table names in the database. The names have NO schema name prefix.
-     * @throws Exception
+     * @throws \Exception
      */
     protected function findValueLists(TableSchema $table)
     {
@@ -292,6 +301,8 @@ class Schema extends \yii\db\Schema
     /**
      * Collects the foreign key column details for the given table.
      * @param TableSchema $table the table metadata
+     * @throws \Exception
+     * @throws yii\base\InvalidConfigException
      */
     protected function findConstraints(TableSchema $table)
     {
@@ -386,12 +397,12 @@ class Schema extends \yii\db\Schema
      * Returns the ID of the last inserted row or sequence value.
      * @param string $sequenceName name of the sequence object (required by some DBMS)
      * @return string the row ID of the last row inserted, or the last value retrieved from the sequence object
-     * @throws InvalidCallException if the DB connection is not active
+     * @throws yii\base\InvalidCallException if the DB connection is not active
      * @see http://www.php.net/manual/en/function.PDO-lastInsertId.php
      */
     public function getLastInsertID($sequenceName = '')
     {
-        throw new InvalidCallException('getLastInsertID is not supported by FileMaker PHP-API.');
+        throw new yii\base\InvalidCallException('getLastInsertID is not supported by FileMaker PHP-API.');
     }
 
     /**
@@ -399,6 +410,8 @@ class Schema extends \yii\db\Schema
      * @param string $table the table that new rows will be inserted into.
      * @param array $columns the column data (name => value) to be inserted into the table.
      * @return integer The FileMaker (internal) Record Id or false if the command fails
+     * @throws FileMakerException
+     * @throws \airmoi\FileMaker\FileMakerValidationException
      * @since 2.0.4
      */
     public function insert($table, $columns)
