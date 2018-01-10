@@ -480,7 +480,7 @@ trait ActiveRelationTrait
 
             $attributeName = reset($attributes);
             foreach ($values as $value) {
-                $this->orWhere([$attributeName => $value]);
+                $this->orFilterAll([$attributeName => $value]);
             }
         } else {
             // composite keys
@@ -499,7 +499,7 @@ trait ActiveRelationTrait
                 if (empty($v)) {
                     $this->emulateExecution();
                 }
-                $this->orWhere($v);
+                $this->orFilterAll($v);
             }
         }
         //$this->andWhere(['in', $attributes, array_unique($values, SORT_REGULAR)]);
