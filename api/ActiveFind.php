@@ -180,11 +180,6 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         $this->db = $modelClass::getDb();
 
         parent::__construct($config);
-
-        /* @var $class FileMakerActiveRecord */
-        $this->_cmd = $this->db->newCompoundFindCommand($this->layout);
-        $this->_currentRequest = $this->db->newFindRequest($this->layout);
-        $this->_requests[] = $this->_currentRequest;
     }
 
     /**
@@ -196,6 +191,11 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     public function init()
     {
         parent::init();
+
+        /* @var $class FileMakerActiveRecord */
+        $this->_cmd = $this->db->newCompoundFindCommand($this->layout);
+        $this->_currentRequest = $this->db->newFindRequest($this->layout);
+        $this->_requests[] = $this->_currentRequest;
         //$this->trigger(self::EVENT_INIT);
     }
 
