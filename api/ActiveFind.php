@@ -347,6 +347,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * Converts found rows into model instances
      * @param \airmoi\FileMaker\Object\Record[] $records
      * @return array|FileMakerActiveRecord[]
+     * @throws \airmoi\FileMaker\FileMakerException
      */
     protected function createModels($records)
     {
