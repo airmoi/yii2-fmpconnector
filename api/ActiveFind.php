@@ -140,6 +140,8 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * @var array
      */
     public $filterAll = [];
+
+    public $inClause = [];
     /**
      *
      * @var \airmoi\FileMaker\Object\Result
@@ -238,7 +240,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
 
             if ($this->primaryModel !== null) {
                 // lazy loading of a relation
-                $where = $this->where;
+                //$where = $this->where;
 
                 if ($this->via instanceof self) {
                     // via junction table
@@ -263,6 +265,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
             }
 
             $this->applyFilterAll();
+            $this->applyInClause();
 
             //Add requests
             foreach ($this->_requests as $i => $findrequest) {
@@ -613,6 +616,20 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     public function orFilterAll($condition)
     {
         $this->filterAll[] = ['or', $condition];
+        return $this;
+    }
+
+    /**
+     * Add a additionnal WHERE condition that will be applied to all requests that are not omit queries
+     * when performing the query
+     * @param array $condition the new WHERE condition (name => value)
+     * @return static the query object itself
+     * @see where()
+     * @see orWhere()
+     */
+    public function andIn($condition)
+    {
+        $this->inClause[] = [$condition];
         return $this;
     }
 
@@ -1065,7 +1082,29 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     }
 
     /**
-     * Apply filterAll to all requets
+     * Apply inClause to all requests
+     * WARNING, this may produce too many requests for FileMaker CWP
+     */
+    private function applyInClause()
+    {
+        $requests = [];
+        foreach ($this->inClause as $condition) {
+            $attribute = key($condition);
+            $values = array_values($condition);
+
+            foreach ($this->_requests as $request) {
+                foreach ($values as $value) {
+                    $newRequest = clone $request;
+                    $requests[] = $newRequest;
+                    $newRequest->addFindCriterion($attribute, '==' . $value);
+                }
+            }
+        }
+        $this->_requests = $requests;
+    }
+
+    /**
+     * Apply filterAll to all requests
      */
     private function applyFilterAll()
     {
