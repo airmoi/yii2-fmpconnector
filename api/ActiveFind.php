@@ -229,7 +229,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      */
     public function prepare()
     {
-        //No prepare when retirving record from its ID
+        //No prepare when retrieving record from its ID
         if ($this->_cmd instanceof Find && $this->_cmd->recordId !== null) {
             return;
         }
@@ -268,6 +268,31 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
                 }
             }
             $this->_cmd->setRelatedSetsFilters($this->relatedSetFilter, $this->relatedSetMax);
+        }
+        if ($this->primaryModel !== null) {
+            // lazy loading of a relation
+            $where = $this->where;
+
+            if ($this->via instanceof self) {
+                // via junction table
+                $viaModels = $this->via->findJunctionRows([$this->primaryModel]);
+                $this->filterByModels($viaModels);
+            } elseif (is_array($this->via)) {
+                // via relation
+                /* @var $viaQuery ActiveQuery */
+                list($viaName, $viaQuery) = $this->via;
+                if ($viaQuery->multiple) {
+                    $viaModels = $viaQuery->all();
+                    $this->primaryModel->populateRelation($viaName, $viaModels);
+                } else {
+                    $model = $viaQuery->one();
+                    $this->primaryModel->populateRelation($viaName, $model);
+                    $viaModels = $model === null ? [] : [$model];
+                }
+                $this->filterByModels($viaModels);
+            } else {
+                $this->filterByModels([$this->primaryModel]);
+            }
         }
         //Apply limits & offset
         $this->offset = $this->offset == -1 ? null : $this->offset;
