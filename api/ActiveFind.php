@@ -629,7 +629,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      */
     public function andIn($condition)
     {
-        $this->inClause[] = [$condition];
+        $this->inClause[] = $condition;
         return $this;
     }
 
@@ -1087,6 +1087,9 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      */
     private function applyInClause()
     {
+        if (empty($this->inClause)) {
+            return;
+        }
         $requests = [];
         foreach ($this->inClause as $condition) {
             $attribute = key($condition);
