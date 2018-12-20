@@ -10,10 +10,11 @@
             "email": "romain@1-more-thing.com"
         }
     ],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
+    "prefer-stable" : true,
     "require": {
-        "yiisoft/yii2": "^2.0.13",
-        "airmoi/filemaker": "@stable"
+        "yiisoft/yii2": "*@stable",
+        "airmoi/filemaker": "dev-feature/custom_log_handler"
     },
     "autoload": {
         "psr-4": {
