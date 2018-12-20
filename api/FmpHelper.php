@@ -105,6 +105,11 @@ class FmpHelper extends Component
         }
     }
 
+    public function setFmOption($property, $value)
+    {
+        return $this->_fm->setProperty($property, $value);
+    }
+
     private function endConnection()
     {
     }
