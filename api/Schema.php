@@ -69,7 +69,7 @@ class Schema extends \yii\db\Schema
      *
      * @var string[]
      */
-    private $_layoutList = null;
+    private $_layoutList = [];
 
     /**
      * Loads the metadata for the specified table.

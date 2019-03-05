@@ -74,7 +74,7 @@ use yii\db\ActiveQueryTrait;
  * @author airmoi <airmoi@gmail.com>
  * @since 2.0
  */
-class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
+class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
 {
     use ActiveQueryTrait;
     use ActiveRelationTrait;
@@ -140,6 +140,8 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * @var array
      */
     public $filterAll = [];
+
+    public $inClause = [];
     /**
      *
      * @var \airmoi\FileMaker\Object\Result
@@ -180,11 +182,6 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
         $this->db = $modelClass::getDb();
 
         parent::__construct($config);
-
-        /* @var $class FileMakerActiveRecord */
-        $this->_cmd = $this->db->newCompoundFindCommand($this->layout);
-        $this->_currentRequest = $this->db->newFindRequest($this->layout);
-        $this->_requests[] = $this->_currentRequest;
     }
 
     /**
@@ -196,6 +193,11 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     public function init()
     {
         parent::init();
+
+        /* @var $class FileMakerActiveRecord */
+        $this->_cmd = $this->db->newCompoundFindCommand($this->layout);
+        $this->_currentRequest = $this->db->newFindRequest($this->layout);
+        $this->_requests[] = $this->_currentRequest;
         //$this->trigger(self::EVENT_INIT);
     }
 
@@ -229,13 +231,41 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      */
     public function prepare()
     {
-        //No prepare when retirving record from its ID
+        //No prepare when retrieving record from its ID
         if ($this->_cmd instanceof Find && $this->_cmd->recordId !== null) {
             return;
         }
 
         if (!$this->_cmd instanceof PerformScript) {
+
+            if ($this->primaryModel !== null) {
+                // lazy loading of a relation
+                //$where = $this->where;
+
+                if ($this->via instanceof self) {
+                    // via junction table
+                    $viaModels = $this->via->findJunctionRows([$this->primaryModel]);
+                    $this->filterByModels($viaModels);
+                } elseif (is_array($this->via)) {
+                    // via relation
+                    /* @var $viaQuery ActiveQuery */
+                    list($viaName, $viaQuery) = $this->via;
+                    if ($viaQuery->multiple) {
+                        $viaModels = $viaQuery->all();
+                        $this->primaryModel->populateRelation($viaName, $viaModels);
+                    } else {
+                        $model = $viaQuery->one();
+                        $this->primaryModel->populateRelation($viaName, $model);
+                        $viaModels = $model === null ? [] : [$model];
+                    }
+                    $this->filterByModels($viaModels);
+                } else {
+                    $this->filterByModels([$this->primaryModel]);
+                }
+            }
+
             $this->applyFilterAll();
+            $this->applyInClause();
 
             //Add requests
             foreach ($this->_requests as $i => $findrequest) {
@@ -347,6 +377,7 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
      * Converts found rows into model instances
      * @param \airmoi\FileMaker\Object\Record[] $records
      * @return array|FileMakerActiveRecord[]
+     * @throws \airmoi\FileMaker\FileMakerException
      */
     protected function createModels($records)
     {
@@ -585,6 +616,20 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     public function orFilterAll($condition)
     {
         $this->filterAll[] = ['or', $condition];
+        return $this;
+    }
+
+    /**
+     * Add a additionnal WHERE condition that will be applied to all requests that are not omit queries
+     * when performing the query
+     * @param array $condition the new WHERE condition (name => value)
+     * @return static the query object itself
+     * @see where()
+     * @see orWhere()
+     */
+    public function andIn($condition)
+    {
+        $this->inClause[] = $condition;
         return $this;
     }
 
@@ -1037,7 +1082,32 @@ class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
     }
 
     /**
-     * Apply filterAll to all requets
+     * Apply inClause to all requests
+     * WARNING, this may produce too many requests for FileMaker CWP
+     */
+    private function applyInClause()
+    {
+        if (empty($this->inClause)) {
+            return;
+        }
+        $requests = [];
+        foreach ($this->inClause as $condition) {
+            $attribute = key($condition);
+            $values = array_values($condition);
+
+            foreach ($this->_requests as $request) {
+                foreach ($values as $value) {
+                    $newRequest = clone $request;
+                    $requests[] = $newRequest;
+                    $newRequest->addFindCriterion($attribute, '==' . $value);
+                }
+            }
+        }
+        $this->_requests = $requests;
+    }
+
+    /**
+     * Apply filterAll to all requests
      */
     private function applyFilterAll()
     {

@@ -6,6 +6,7 @@ namespace airmoi\yii2fmconnector\api;
 
 use yii\base\InvalidConfigException;
 use yii\base\InvalidParamException;
+use yii\base\NotSupportedException;
 use yii\db\ActiveQueryInterface;
 use yii\db\ActiveQueryTrait;
 use yii\db\ActiveRecordInterface;
@@ -70,7 +71,7 @@ trait ActiveRelationTrait
      */
     public function __clone()
     {
-        parent::__clone();
+        //parent::__clone();
         // make a clone of "via" object so that the same query object can be reused multiple times
         if (is_object($this->via)) {
             $this->via = clone $this->via;
@@ -454,6 +455,7 @@ trait ActiveRelationTrait
 
     /**
      * @param array $models
+     * @throws NotSupportedException
      */
     private function filterByModels($models)
     {
@@ -480,11 +482,11 @@ trait ActiveRelationTrait
 
             $attributeName = reset($attributes);
             foreach ($values as $value) {
-                $this->orWhere([$attributeName => $value]);
+                $this->andIn([$attributeName => $value]);
             }
         } else {
             // composite keys
-
+            throw new NotSupportedException('Composite Keys are not supported yet in relations');
             // ensure keys of $this->link are prefixed the same way as $attributes
             $prefixedLink = array_combine(
                 $attributes,
@@ -499,7 +501,7 @@ trait ActiveRelationTrait
                 if (empty($v)) {
                     $this->emulateExecution();
                 }
-                $this->orWhere($v);
+                $this->andIn($v);
             }
         }
         //$this->andWhere(['in', $attributes, array_unique($values, SORT_REGULAR)]);
