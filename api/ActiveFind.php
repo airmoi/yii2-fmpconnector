@@ -74,7 +74,7 @@ use yii\db\ActiveQueryTrait;
  * @author airmoi <airmoi@gmail.com>
  * @since 2.0
  */
-class ActiveFind extends \yii\base\Object implements ActiveQueryInterface
+class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
 {
     use ActiveQueryTrait;
     use ActiveRelationTrait;
