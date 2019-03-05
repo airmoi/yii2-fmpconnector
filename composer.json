@@ -13,7 +13,7 @@
     "minimum-stability": "beta",
     "prefer-stable" : true,
     "require": {
-        "yiisoft/yii2": "*@stable",
+        "yiisoft/yii2": "^2.0.13",
         "airmoi/filemaker": "@stable"
     },
     "autoload": {
