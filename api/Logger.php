@@ -44,7 +44,7 @@ class Logger
         Yii::beginProfile($token, __NAMESPACE__);
     }
 
-    public function endProfile($token)
+    public function profileEnd($token)
     {
         Yii::endProfile($token, __NAMESPACE__);
     }
