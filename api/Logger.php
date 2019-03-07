@@ -32,7 +32,7 @@ class Logger
                 Yii::debug($message, __NAMESPACE__);
                 break;
             case FileMaker::LOG_NOTICE:
-                Yii::info($message, __NAMESPACE__);
+                Yii::warning($message, __NAMESPACE__);
                 break;
             default:
                 Yii::warning($message, __NAMESPACE__);
