@@ -65,7 +65,6 @@ class Connection extends \yii\db\Connection
 
     public $host;
     public $dbName;
-    public $logger;
 
     public $schemaMap = [
         'fmpapi' => [
@@ -140,7 +139,6 @@ class Connection extends \yii\db\Connection
                 'host' => $this->host,
                 'username' => $this->username,
                 'password' => $this->password,
-                'logger' => $this->logger,
                 'schemaCache' => $this->enableSchemaCache,
                 'schemaCacheDuration' => $this->schemaCacheDuration,
                 'cache' => $this->schemaCache,
@@ -210,7 +208,7 @@ class Connection extends \yii\db\Connection
     {
         if (method_exists($this, $name)) {
             return call_user_func_array([$this, $name], $params);
-        } elseif (method_exists($this->_fm, $name)) {
+        } elseif (is_callable([$this->_fm, $name])) {
             return call_user_func_array([$this->_fm, $name], $params);
         }
 
