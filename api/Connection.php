@@ -142,6 +142,8 @@ class Connection extends \yii\db\Connection
                 'schemaCache' => $this->enableSchemaCache,
                 'schemaCacheDuration' => $this->schemaCacheDuration,
                 'cache' => $this->schemaCache,
+                'enableProfiling' => $this->enableProfiling,
+                'enableLogging' => $this->enableLogging
             ]
         );
         return new FmpHelper($config);

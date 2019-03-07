@@ -76,6 +76,8 @@ class FmpHelper extends Component
     public $cache = null;
     public $schemaCache = true;
     public $schemaCacheDuration = null;
+    public $enableProfiling = false;
+    public $enableLogging = false;
 
     /** @var FileMaker */
     private $_fm;
@@ -110,12 +112,15 @@ class FmpHelper extends Component
             $this->_fm->setProperty('emptyAsNull', $this->emptyAsNull);
             $this->_fm->setProperty('schemaCache', $this->schemaCache);
             $this->_fm->setProperty('schemaCacheDuration', $this->schemaCacheDuration);
+            $this->_fm->setProperty('enableProfiling', $this->enableProfiling);
 
             if ($this->cache) {
                 $this->_fm->setCache(Yii::$app->get($this->cache));
             }
 
-            $this->_fm->setLogger(new Logger());
+            if ($this->enableLogging) {
+                $this->_fm->setLogger(new Logger());
+            }
         }
     }
 
