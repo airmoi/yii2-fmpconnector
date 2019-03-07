@@ -73,13 +73,17 @@ class FmpHelper extends Component
     public $prevalidate = false;
     public $emptyAsNull = false;
     public $curlOptions = [CURLOPT_SSL_VERIFYPEER => false];
+    public $cache = null;
+    public $schemaCache = true;
+    public $schemaCacheDuration = null;
+
+    public $logger = null;
 
     /** @var FileMaker */
     private $_fm;
     private $_layout;
     private $_valueLists = [];
     private $_scriptResult;
-    private $_cookie;
 
     public function __construct($config = [])
     {
@@ -91,6 +95,10 @@ class FmpHelper extends Component
         parent::init();
     }
 
+    /**
+     * @throws FileMakerException
+     * @throws \yii\base\InvalidConfigException
+     */
     private function initConnection()
     {
         if ($this->_fm === null) {
@@ -102,9 +110,24 @@ class FmpHelper extends Component
             $this->_fm->setProperty('dateFormat', $this->dateFormat);
             $this->_fm->setProperty('useCookieSession', $this->useCookieSession);
             $this->_fm->setProperty('emptyAsNull', $this->emptyAsNull);
+            $this->_fm->setProperty('schemaCache', $this->schemaCache);
+            $this->_fm->setProperty('schemaCacheDuration', $this->schemaCacheDuration);
+
+            if ($this->cache) {
+                $this->_fm->setCache(Yii::$app->get($this->cache));
+            }
+            if ($this->logger) {
+                $this->_fm->setLogger(Yii::$app->get($this->logger));
+            }
         }
     }
 
+    /**
+     * @param $property
+     * @param $value
+     * @return FileMakerException|null
+     * @throws FileMakerException
+     */
     public function setFmOption($property, $value)
     {
         return $this->_fm->setProperty($property, $value);
@@ -120,6 +143,7 @@ class FmpHelper extends Component
      * @param string $scriptName
      * @param array $params
      * @return boolean
+     * @throws \yii\base\InvalidConfigException
      */
     public function performScript($scriptName, array $params)
     {
@@ -167,7 +191,7 @@ class FmpHelper extends Component
             if (!$xml = simplexml_load_string($data, 'SimpleXMLElement', LIBXML_NOCDATA)) {
                 Yii::error(
                     'xmlget error : ' . $data . '(' . print_r(libxml_get_errors(), true) . ')',
-                    'airmoi\yii2fmconnector\api\FmpHelper::getValueList'
+                    __METHOD__
                 );
                 return null;
             }
@@ -214,6 +238,11 @@ class FmpHelper extends Component
         return self::xmlget($this->_scriptResult, $this->scriptResultTag);
     }
 
+    /**
+     * @param $listName
+     * @return array|mixed
+     * @throws \yii\base\InvalidConfigException
+     */
     public function getValueList($listName)
     {
         try {
@@ -247,7 +276,8 @@ class FmpHelper extends Component
      * @param string $name the method name
      * @param array $params method parameters
      * @return mixed the method return value
-     * @throws UnknownMethodException when calling unknown method
+     * @throws FileMakerException
+     * @throws \yii\base\InvalidConfigException
      */
     public function __call($name, $params)
     {

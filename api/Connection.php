@@ -75,13 +75,20 @@ class Connection extends \yii\db\Connection
 
     public $options = [];
 
+    /**
+     * Connection constructor.
+     * @param array $config
+     * @throws \Exception
+     */
     public function __construct($config = array())
     {
         parent::__construct($config);
         $this->open();
     }
 
-
+    /**
+     * @throws \Exception
+     */
     public function reset()
     {
         $this->_fm = null;
@@ -120,6 +127,7 @@ class Connection extends \yii\db\Connection
      * The default implementation will create a PHP PDO instance.
      * You may override this method if the default PDO needs to be adapted for certain DBMS.
      * @return FmpHelper the FileMaker Helper instance
+     * @throws \Exception
      */
     protected function createFmInstance()
     {
@@ -138,6 +146,7 @@ class Connection extends \yii\db\Connection
 
     /**
      * DSN pattern : fmpapi:host=<host ip or dns>;dbname=<db name>
+     * @throws \Exception
      */
     public function parseDsn()
     {
@@ -177,13 +186,6 @@ class Connection extends \yii\db\Connection
     public function createCommand($sql = null, $params = [])
     {
         return new FmpHelper();
-
-        /*$command = new FmpCommand([
-            'db' => $this,
-            'sql' => $sql,
-        ]);
-
-        return $command->bindValues($params);*/
     }
 
     /**
@@ -204,8 +206,6 @@ class Connection extends \yii\db\Connection
         if (method_exists($this, $name)) {
             return call_user_func_array([$this, $name], $params);
         }
-
-        return call_user_func_array([$this->_fm, $name], $params);
 
         throw new UnknownMethodException('Calling unknown method: ' . get_class($this) . "::$name()");
     }
