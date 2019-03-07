@@ -1002,7 +1002,8 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
 
     private function serializeQuery()
     {
-        $command = ['layout' => $this->layout];
+        return $this->db->getLastRequestedUrl();
+        /*$command = ['layout' => $this->layout];
         $command['resultLayout'] = $this->resultLayout;
         $command['method'] = get_class($this->_cmd);
         if ($this->_cmd instanceof CompoundFind) {
@@ -1027,7 +1028,7 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
         $command['globals'] = $this->_cmd->getGlobals();
         $command['scripts'] = $this->_scripts;
 
-        return json_encode($command);
+        return json_encode($command);*/
     }
 
     /**
