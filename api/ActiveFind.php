@@ -559,6 +559,12 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
      */
     public function andWhere($condition)
     {
+        if(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'and')) {
+            $condition = $condition[1];
+        }
+        elseif(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'or')) {
+            $this->orWhere($condition);
+        }
         foreach ($condition as $fieldName => $testvalue) {
             //if(!$testvalue=='') {
             $this->_currentRequest->addFindCriterion($fieldName, '==' . $testvalue . '');
@@ -693,6 +699,13 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
      */
     public function orWhere($condition, $layout = null)
     {
+        if(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'or')) {
+            $condition = $condition[1];
+        }
+        elseif(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'and')) {
+            $this->andWhere($condition);
+        }
+
         if ($layout === null) {
             $layout = $this->layout;
         }
