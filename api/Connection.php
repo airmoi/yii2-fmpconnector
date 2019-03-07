@@ -65,6 +65,7 @@ class Connection extends \yii\db\Connection
 
     public $host;
     public $dbName;
+    public $logger;
 
     public $schemaMap = [
         'fmpapi' => [
@@ -138,7 +139,11 @@ class Connection extends \yii\db\Connection
                 'db' => $this->dbName,
                 'host' => $this->host,
                 'username' => $this->username,
-                'password' => $this->password
+                'password' => $this->password,
+                'logger' => $this->logger,
+                'schemaCache' => $this->enableSchemaCache,
+                'schemaCacheDuration' => $this->schemaCacheDuration,
+                'cache' => $this->schemaCache,
             ]
         );
         return new FmpHelper($config);
