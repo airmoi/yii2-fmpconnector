@@ -559,10 +559,10 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
      */
     public function andWhere($condition)
     {
-        if(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'and')) {
+        if(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'and') === 0) {
             $condition = $condition[1];
         }
-        elseif(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'or')) {
+        elseif(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'or') === 0) {
             $this->orWhere($condition);
         }
         foreach ($condition as $fieldName => $testvalue) {
@@ -699,10 +699,10 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
      */
     public function orWhere($condition, $layout = null)
     {
-        if(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'or')) {
+        if(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'or') === 0) {
             $condition = $condition[1];
         }
-        elseif(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'and')) {
+        elseif(is_array($condition) && isset($condition[0]) && strcasecmp($condition[0], 'and') === 0) {
             $this->andWhere($condition);
         }
 
