@@ -319,25 +319,23 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
      * Prepare and execute the query
      * @return \airmoi\FileMaker\Object\Result
      * @throws \yii\db\Exception
+     * @throws \yii\base\NotSupportedException
      */
     public function execute()
     {
         if ($this->_result === null) {
             $this->prepare();
 
-            Yii::beginProfile($this->serializeQuery(), 'yii\db\Command::query');
+            //Yii::beginProfile($this->serializeQuery(), 'yii\db\Command::query');
 
             try {
                 $this->_result = $this->_cmd->execute();
                 $this->_count = $this->_result->getFoundSetCount();
-                Yii::info(urldecode($this->db->getLastRequestedUrl()), __METHOD__);
             } catch (\Exception $e) {
-                Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
-                Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
                 throw $this->db->getSchema()->convertException($e, $this->serializeQuery());
             }
 
-            Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
+            //Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
         }
         return $this->_result;
     }

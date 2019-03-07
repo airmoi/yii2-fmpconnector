@@ -42,6 +42,9 @@ class Logger
     public function profileBegin($token)
     {
         Yii::beginProfile($token, __NAMESPACE__);
+
+        //Add custom query log to yii\db\Command::query category so it appears in Yii debug databases debug panel
+        Yii::info($token, 'yii\db\Command::query');
     }
 
     public function profileEnd($token)

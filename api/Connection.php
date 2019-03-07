@@ -69,8 +69,7 @@ class Connection extends \yii\db\Connection
     public $schemaMap = [
         'fmpapi' => [
             'class' => 'airmoi\yii2fmconnector\api\Schema',
-        ]// FileMaker ODBC
-
+        ]
     ];
 
     public $options = [];
@@ -106,17 +105,10 @@ class Connection extends \yii\db\Connection
             return;
         }
 
-        $token = 'Opening DB connection: ' . $this->dsn;
         try {
-            Yii::info($token, __METHOD__);
-            Yii::beginProfile($token, __METHOD__);
-
             $this->_fm = $this->createFmInstance();
             $this->initConnection();
-
-            Yii::endProfile($token, __METHOD__);
         } catch (\Exception $e) {
-            Yii::endProfile($token, __METHOD__);
             throw new \Exception($e->getMessage(), (int)$e->getCode(), $e);
         }
     }
@@ -156,7 +148,6 @@ class Connection extends \yii\db\Connection
     public function parseDsn()
     {
         if (($pos = strpos($this->dsn, ':')) !== false) {
-            //$driver = substr($this->dsn, 0, $pos);
             $connectionString = substr($this->dsn, $pos + 1, strlen($this->dsn));
         } else {
             $connectionString = $this->dsn;
