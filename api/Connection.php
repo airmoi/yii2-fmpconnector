@@ -210,6 +210,8 @@ class Connection extends \yii\db\Connection
     {
         if (method_exists($this, $name)) {
             return call_user_func_array([$this, $name], $params);
+        } elseif (method_exists($this->_fm, $name)) {
+            return call_user_func_array([$this->_fm, $name], $params);
         }
 
         throw new UnknownMethodException('Calling unknown method: ' . get_class($this) . "::$name()");
