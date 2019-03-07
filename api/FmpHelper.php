@@ -77,8 +77,6 @@ class FmpHelper extends Component
     public $schemaCache = true;
     public $schemaCacheDuration = null;
 
-    public $logger = null;
-
     /** @var FileMaker */
     private $_fm;
     private $_layout;
@@ -116,9 +114,8 @@ class FmpHelper extends Component
             if ($this->cache) {
                 $this->_fm->setCache(Yii::$app->get($this->cache));
             }
-            if ($this->logger) {
-                $this->_fm->setLogger(Yii::$app->get($this->logger));
-            }
+
+            $this->_fm->setLogger(new Logger());
         }
     }
 
