@@ -398,10 +398,10 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
 
                 //Store related sets
                 foreach ($record->getLayout()->getRelatedSets() as $relatedSetName => $relatedset) {
-                    foreach ($relatedset as $i => $record) {
+                    foreach ($record->getRelatedSet($relatedSetName) as $i => $record) {
                         $row[$relatedSetName][$i] = ['_recid' => $record->getRecordId()];
                         foreach ($record->getFields() as $field) {
-                            $row[$relatedSetName][$i][$field] = $relatedset->getField($field);
+                            $row[$relatedSetName][$i][$field] = $record->getField($field);
                         }
                     }
                 }

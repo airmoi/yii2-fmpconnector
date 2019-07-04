@@ -152,8 +152,8 @@ class FmpHelper extends Component
     public function performScript($scriptName, array $params)
     {
         try {
-            $this->initConnection();
             $scriptParameters = "";
+            $this->initConnection();
             foreach ($params as $name => $value) {
                 $scriptParameters .= "<" . $name . ">" . $value . "</" . $name . ">";
             }
