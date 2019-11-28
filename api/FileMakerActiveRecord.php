@@ -397,6 +397,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
         /* @var $tableSchema TableSchema */
         $row = [];
         $attributePrefix = $record->isPortal ? $record->tableOccurence . '::' : '';
+        $fmFields = $fmRecord->getFields();
         foreach ($record->attributes() as $attribute) {
             //Ugly fix : bypass _recid as it is manually defined later
             if ($attribute == '_recid') {
@@ -407,7 +408,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
                 for ($i = 0; $i <= $tableSchema->columns[$attribute]->maxRepeat; $i++) {
                     $row[$attribute][$i] = $fmRecord->getField($attributePrefix . $attribute, $i);
                 }
-            } else {
+            } elseif (in_array($attribute, $fmFields)) {
                 $row[$attribute] = $fmRecord->getField($attributePrefix . $attribute);
             }
         }
@@ -459,8 +460,11 @@ class FileMakerActiveRecord extends BaseActiveRecord
 
 
         $row = [];
+        $fmFields = $record->getFields();
         foreach (array_keys($tableSchema->columns) as $fieldName) {
-            $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
+            if (in_array($tableSchema->name . '::' . $fieldName,$fmFields )) {
+                $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
+            }
         }
 
         parent::populateRecord($model, $row);

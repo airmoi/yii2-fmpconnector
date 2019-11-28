@@ -107,7 +107,7 @@ class Schema extends \yii\db\Schema
                 Yii::beginProfile($token, __METHOD__);
 
                 $this->_layout[$layoutName] = $this->db->getLayout($layoutName);
-                $this->_layout[$layoutName]->loadExtendedInfo();
+                //$this->_layout[$layoutName]->loadExtendedInfo();
 
                 Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
             } catch (FileMakerException $e) {
