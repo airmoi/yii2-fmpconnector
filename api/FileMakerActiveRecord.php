@@ -398,6 +398,10 @@ class FileMakerActiveRecord extends BaseActiveRecord
         $row = [];
         $attributePrefix = $record->isPortal ? $record->tableOccurence . '::' : '';
         foreach ($record->attributes() as $attribute) {
+            //Ugly fix : bypass _recid as it is manually defined later
+            if ($attribute == '_recid') {
+                continue;
+            }
             if ($tableSchema->columns[$attribute]->maxRepeat > 1) {
                 $row[$attribute] = [];
                 for ($i = 0; $i <= $tableSchema->columns[$attribute]->maxRepeat; $i++) {
