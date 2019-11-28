@@ -59,6 +59,7 @@ class FmpHelper extends Component
     public $resultLayout = "PHP_scriptResult";
     public $resultField = "PHP_scriptResult";
     public $valueListLayout = "PHP_valueLists";
+    public $engine = "cwp";
     public $errorTag = "SCRIPT_ERRORCODE";
     public $errorDescriptionTag = "SCRIPT_ERRORDESCRIPTION";
     public $scriptResultTag = "SCRIPT_RESULT";
@@ -76,6 +77,7 @@ class FmpHelper extends Component
     public $cache = null;
     public $schemaCache = true;
     public $schemaCacheDuration = null;
+    public $sessionHandler = null;
     public $enableProfiling = false;
     public $enableLogging = false;
     public $logLevel = FileMaker::LOG_ERR;
@@ -115,6 +117,7 @@ class FmpHelper extends Component
             $this->_fm->setProperty('schemaCacheDuration', $this->schemaCacheDuration);
             $this->_fm->setProperty('enableProfiling', $this->enableProfiling);
             $this->_fm->setProperty('logLevel', $this->logLevel);
+            $this->_fm->setProperty('engine', $this->engine);
 
             if ($this->cache) {
                 $this->_fm->setCache(Yii::$app->get($this->cache));
@@ -122,6 +125,9 @@ class FmpHelper extends Component
 
             if ($this->enableLogging) {
                 $this->_fm->setLogger(new Logger());
+            }
+            if ($this->sessionHandler) {
+                $this->_fm->setSessionHandler($this->sessionHandler);
             }
         }
     }
@@ -163,8 +169,12 @@ class FmpHelper extends Component
             $result = $cmd->execute();
 
             Yii::endProfile("Perform script '$scriptName' with params '$scriptParameters'", 'yii\db\Command::query');
-            $record = $result->getFirstRecord();
-            $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
+            if ($this->engine == "cwp") {
+                $record = $result->getFirstRecord();
+                $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
+            } else {
+                $this->_scriptResult = $result;
+            }
             $this->endConnection();
             return true;
         }

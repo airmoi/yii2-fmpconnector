@@ -135,7 +135,8 @@ class Connection extends \yii\db\Connection
                 'schemaCacheDuration' => $this->schemaCacheDuration,
                 'cache' => $this->schemaCache,
                 'enableProfiling' => $this->enableProfiling,
-                'enableLogging' => $this->enableLogging
+                'enableLogging' => $this->enableLogging,
+                'sessionHandler' => $this->getSessionHandler(),
             ]
         );
         return new FmpHelper($config);
@@ -158,6 +159,13 @@ class Connection extends \yii\db\Connection
 
         if (empty($this->dbName)) {
             throw new \Exception("Please provide a DB Name");
+        }
+    }
+
+    public function getSessionHandler()
+    {
+        if (Yii::$app instanceof yii\web\Application) {
+            return Yii::$app->session;
         }
     }
 
