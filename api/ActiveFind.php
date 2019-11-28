@@ -319,25 +319,23 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
      * Prepare and execute the query
      * @return \airmoi\FileMaker\Object\Result
      * @throws \yii\db\Exception
+     * @throws \yii\base\NotSupportedException
      */
     public function execute()
     {
         if ($this->_result === null) {
             $this->prepare();
 
-            Yii::beginProfile($this->serializeQuery(), 'yii\db\Command::query');
+            //Yii::beginProfile($this->serializeQuery(), 'yii\db\Command::query');
 
             try {
                 $this->_result = $this->_cmd->execute();
                 $this->_count = $this->_result->getFoundSetCount();
-                Yii::info(urldecode($this->db->getLastRequestedUrl()), __METHOD__);
             } catch (\Exception $e) {
-                Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
-                Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
                 throw $this->db->getSchema()->convertException($e, $this->serializeQuery());
             }
 
-            Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
+            //Yii::endProfile($this->serializeQuery(), 'yii\db\Command::query');
         }
         return $this->_result;
     }
@@ -400,10 +398,10 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
 
                 //Store related sets
                 foreach ($record->getLayout()->getRelatedSets() as $relatedSetName => $relatedset) {
-                    foreach ($relatedset as $i => $record) {
+                    foreach ($record->getRelatedSet($relatedSetName) as $i => $record) {
                         $row[$relatedSetName][$i] = ['_recid' => $record->getRecordId()];
                         foreach ($record->getFields() as $field) {
-                            $row[$relatedSetName][$i][$field] = $relatedset->getField($field);
+                            $row[$relatedSetName][$i][$field] = $record->getField($field);
                         }
                     }
                 }
@@ -1004,7 +1002,8 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
 
     private function serializeQuery()
     {
-        $command = ['layout' => $this->layout];
+        return $this->db->getLastRequestedUrl();
+        /*$command = ['layout' => $this->layout];
         $command['resultLayout'] = $this->resultLayout;
         $command['method'] = get_class($this->_cmd);
         if ($this->_cmd instanceof CompoundFind) {
@@ -1029,7 +1028,7 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
         $command['globals'] = $this->_cmd->getGlobals();
         $command['scripts'] = $this->_scripts;
 
-        return json_encode($command);
+        return json_encode($command);*/
     }
 
     /**
