@@ -10,10 +10,10 @@
             "email": "romain@1-more-thing.com"
         }
     ],
-    "minimum-stability": "stable",
+    "minimum-stability": "beta",
     "require": {
-        "yiisoft/yii2": "^2.0.13",
-        "airmoi/filemaker": "@stable"
+        "yiisoft/yii2": "*@stable",
+        "airmoi/filemaker": "2.2.6"
     },
     "autoload": {
         "psr-4": {
