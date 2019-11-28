@@ -279,7 +279,7 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
             //Tranform query to findall query if no find request set (empty CompoundFind are to supported by cwp)
             if (!sizeof($this->_requests) && $this->_cmd instanceof CompoundFind) {
                 $this->_cmd = $this->db->newFindAllCommand($this->layout);
-                Yii::warning("Query transformed to findAll (no request defined)", 'yii\db\Command::query');
+                Yii::debug("Query transformed to findAll (no request defined)", 'yii\db\Command::query');
             }
 
             //Add sort rules
