@@ -173,7 +173,7 @@ class FmpHelper extends Component
                 $record = $result->getFirstRecord();
                 $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
             } else {
-                $this->_scriptResult = $result;
+                $this->_scriptResult = $result['scriptResult'];
             }
             $this->endConnection();
             return true;
