@@ -28,6 +28,16 @@ class FileMakerActiveRecord extends BaseActiveRecord
     public static $defaultLayout;
 
     /**
+     * @var string the default layout used to get matching records count in a query
+     */
+    public static $countLayout;
+
+    /**
+     * @var string the default layout to use for find requests
+     */
+    public static $defaultSearchLayout;
+
+    /**
      *
      * @var \airmoi\FileMaker\Object\Layout
      */
