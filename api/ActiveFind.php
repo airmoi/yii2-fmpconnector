@@ -960,7 +960,19 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
         if ($this->emulateExecution) {
             return 0;
         }
-        $this->execute();
+        if ($this->_count === null) {
+            //Perform the query and get the only first record to retrieve the foundcount
+            //If $countLayout is defined in the model, will use this layout to get results instead (prevent unnecessary data flow)
+            $countQuery = clone $this;
+            $countQuery->limit = 0;
+            $class = $this->modelClass;
+            if ($class::$countLayout) {
+                $countQuery->resultLayout =  $class::$countLayout;
+            }
+
+            $countQuery->execute();
+            $this->_count = $countQuery->_count;
+        }
         return $this->_count;
     }
 
