@@ -11,6 +11,8 @@ use Yii;
 use yii\base\InvalidConfigException;
 use yii\base\Model;
 use airmoi\yii2fmconnector\api\Connection;
+use yii\base\NotSupportedException;
+use yii\db\Exception;
 use yii\db\QueryInterface;
 use yii\di\Instance;
 
@@ -77,28 +79,26 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
 
     /**
      * @inheritdoc
+     * @throws \Exception
      */
     protected function prepareModels()
     {
         if (!$this->query instanceof ActiveFind) {
             throw new InvalidConfigException('The "query" property must be an instance of a class that implements ActiveFind.');
         }
-        
+
         if (($pagination = $this->getPagination()) !== false) {
             //Dirty hack : force page n° as totalcount is already returned by FileMaker PHP-API
             $pagination->setPage(Yii::$app->getRequest()->getQueryParam($pagination->pageParam, 1)-1, false);
             $this->query->limit($pagination->getLimit())->offset($pagination->getOffset());
         }
         if (($sort = $this->getSort()) !== false) {
-            /*foreach($sort->getOrders() as $field => $order){
-                $this->query->orderBy(); //append 'end' to asc/desc
-            }*/
             $this->query->addOrderBy($sort->getOrders());
         }
 
-        $models =  $this->query->all();
+        $models = $this->query->all();
         if ($pagination instanceof \yii\data\Pagination) {
-            $pagination->totalCount = $this->query->count();
+            $pagination->totalCount = $this->query->getTotalCount();
         }
         return $models;
     }
@@ -120,7 +120,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
 
             return $keys;
         } elseif ($this->query instanceof ActiveFind) {
-            /* @var $class \yii\db\ActiveRecord */
+            /* @var $class FileMakerActiveRecord */
             $class = $this->query->modelClass;
             $pks = $class::primaryKey();
             if (count($pks) === 1) {
@@ -145,7 +145,11 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
     }
 
     /**
-     * @inheritdoc
+     * Returns a value indicating the total number of data models in this data provider.
+     * @return int total number of data models in this data provider.
+     * @throws InvalidConfigException
+     * @throws NotSupportedException
+     * @throws Exception
      */
     protected function prepareTotalCount()
     {

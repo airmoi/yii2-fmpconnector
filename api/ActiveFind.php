@@ -10,11 +10,14 @@ namespace airmoi\yii2fmconnector\api;
 use airmoi\FileMaker\Command\CompoundFind;
 use airmoi\FileMaker\Command\Find;
 use airmoi\FileMaker\Command\PerformScript;
+use airmoi\FileMaker\Object\Result;
 use Yii;
 use yii\base\InvalidConfigException;
 use airmoi\FileMaker\FileMaker;
+use yii\base\NotSupportedException;
 use yii\db\ActiveQueryInterface;
 use yii\db\ActiveQueryTrait;
+use yii\db\Exception;
 
 /**
  * ActiveQuery represents a DB query associated with an Active Record class.
@@ -144,7 +147,7 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
     public $inClause = [];
     /**
      *
-     * @var \airmoi\FileMaker\Object\Result
+     * @var Result
      */
     private $_result;
 
@@ -317,9 +320,9 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
 
     /**
      * Prepare and execute the query
-     * @return \airmoi\FileMaker\Object\Result
-     * @throws \yii\db\Exception
-     * @throws \yii\base\NotSupportedException
+     * @return Result
+     * @throws Exception
+     * @throws NotSupportedException
      */
     public function execute()
     {
@@ -954,6 +957,8 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
      * @param Connection $db unused.
      * If this parameter is not given, the `db` application component will be used.
      * @return integer number of records
+     * @throws NotSupportedException
+     * @throws Exception
      */
     public function count($q = '*', $db = null)
     {
@@ -964,7 +969,10 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
             //Perform the query and get the only first record to retrieve the foundcount
             //If $countLayout is defined in the model, will use this layout to get results instead (prevent unnecessary data flow)
             $countQuery = clone $this;
-            $countQuery->limit = 0;
+            //Data API does not support limit 0
+            $countQuery->limit = $countQuery->db->getProperty('useDataApi') ? 1 : 0;
+            //No need to sort for a count
+            $countQuery->orderBy = [];
             $class = $this->modelClass;
             if ($class::$countLayout) {
                 $countQuery->resultLayout =  $class::$countLayout;
@@ -1047,6 +1055,7 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
      *
      * @param int $id
      * @return FileMakerActiveRecord
+     * @throws \Exception
      */
     public function getRecordById($id)
     {
@@ -1092,7 +1101,7 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
     }
 
     /**
-     * Set a global field to be define before perfoming the command.
+     * Set a global field to be define before performing the command.
      *
      * @param string $fieldName the global field name.
      * @param string $fieldValue value to be set.
@@ -1181,6 +1190,18 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
     {
         $this->emulateExecution = $value;
         return $this;
+    }
+
+    /**
+     * @return int
+     * @throws Exception
+     */
+    public function getTotalCount()
+    {
+        if (!$this->_result) {
+            throw new Exception('You must perform a query first to get total count');
+        }
+        return $this->_result->getFoundSetCount();
     }
 }
 

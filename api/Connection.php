@@ -54,6 +54,7 @@ use yii\base\UnknownMethodException;
  * @method string getLastRequestedUrl() Last URL call to xml engine.
  *
  * @method null setProperty($prop, $value) Sets a property to a new value for all API calls.
+ * @method null getProperty($prop) get FileMaker API property Value.
  */
 class Connection extends \yii\db\Connection
 {
