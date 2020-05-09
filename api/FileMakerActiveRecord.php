@@ -416,10 +416,10 @@ class FileMakerActiveRecord extends BaseActiveRecord
             if ($tableSchema->columns[$attribute]->maxRepeat > 1) {
                 $row[$attribute] = [];
                 for ($i = 0; $i <= $tableSchema->columns[$attribute]->maxRepeat; $i++) {
-                    $row[$attribute][$i] = $fmRecord->getField($attributePrefix . $attribute, $i);
+                    $row[$attribute][$i] = $fmRecord->getField($attributePrefix . $attribute, $i, true);
                 }
             } elseif (in_array($attribute, $fmFields)) {
-                $row[$attribute] = $fmRecord->getField($attributePrefix . $attribute);
+                $row[$attribute] = $fmRecord->getField($attributePrefix . $attribute, 0, true);
             }
         }
 
@@ -473,7 +473,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
         $fmFields = $record->getFields();
         foreach (array_keys($tableSchema->columns) as $fieldName) {
             if (in_array($tableSchema->name . '::' . $fieldName,$fmFields )) {
-                $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
+                $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName, 0, true);
             }
         }
 

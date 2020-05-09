@@ -395,13 +395,13 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
             foreach ($records as $key => $record) {
                 $row = [];
                 if (is_string($this->indexBy)) {
-                    $key = $record->getField($this->indexBy);
+                    $key = $record->getField($this->indexBy, 0, true);
                 } elseif (is_callable($this->indexBy)) {
                     $key = call_user_func($this->indexBy, $record);
                 }
                 $row['_recid'] = $record->getRecordId();
                 foreach ($record->getFields() as $field) {
-                    $row[$field] = $record->getField($field);
+                    $row[$field] = $record->getField($field, 0, true);
                 }
 
                 //Store related sets
@@ -409,7 +409,7 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
                     foreach ($record->getRelatedSet($relatedSetName) as $i => $record) {
                         $row[$relatedSetName][$i] = ['_recid' => $record->getRecordId()];
                         foreach ($record->getFields() as $field) {
-                            $row[$relatedSetName][$i][$field] = $record->getField($field);
+                            $row[$relatedSetName][$i][$field] = $record->getField($field, 0, true);
                         }
                     }
                 }
