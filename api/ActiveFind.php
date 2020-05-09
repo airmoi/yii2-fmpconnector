@@ -315,7 +315,12 @@ class ActiveFind extends \yii\base\BaseObject implements ActiveQueryInterface
         foreach ($scriptParameters as $name => $value) {
             $parameters .= "<" . $name . ">" . $value . "</" . $name . ">";
         }
-        $this->_cmd = $this->db->newPerformScriptCommand($this->resultLayout, $scriptName, $parameters);
+        if ($this->db->getProperty('useDataApi')) {
+            $this->_cmd = $this->db->newFindAllCommand($this->resultLayout);
+            $this->_cmd->setScript($scriptName, $parameters);
+        } else {
+            $this->_cmd = $this->db->newPerformScriptCommand($this->resultLayout, $scriptName, $parameters);
+        }
     }
 
     /**
