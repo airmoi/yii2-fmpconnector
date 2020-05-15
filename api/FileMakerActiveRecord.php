@@ -418,7 +418,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
                 for ($i = 0; $i <= $tableSchema->columns[$attribute]->maxRepeat; $i++) {
                     $row[$attribute][$i] = $fmRecord->getField($attributePrefix . $attribute, $i, true);
                 }
-            } elseif (in_array($attribute, $fmFields)) {
+            } elseif (in_array($attributePrefix . $attribute, $fmFields)) {
                 $row[$attribute] = $fmRecord->getField($attributePrefix . $attribute, 0, true);
             }
         }
