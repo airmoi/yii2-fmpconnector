@@ -468,7 +468,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
         $row = [];
         $fmFields = $record->getFields();
         foreach (array_keys($tableSchema->columns) as $fieldName) {
-            if (in_array($fieldName,$fmFields )) {
+            if (in_array($tableSchema->name . '::' . $fieldName,$fmFields )) {
                 $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName, 0, self::getDb()->unencodedData);
             }
         }
