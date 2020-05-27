@@ -407,6 +407,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
         /* @var $tableSchema TableSchema */
         $row = [];
         $attributePrefix = $record->isPortal ? $record->tableOccurence . '::' : '';
+        $fmFields = $fmRecord->getFields();
         foreach ($record->attributes() as $attribute) {
             if ($tableSchema->columns[$attribute]->maxRepeat > 1) {
                 $row[$attribute] = [];
@@ -465,6 +466,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
 
 
         $row = [];
+        $fmFields = $record->getFields();
         foreach (array_keys($tableSchema->columns) as $fieldName) {
             if (in_array($tableSchema->name . '::' . $fieldName,$fmFields )) {
                 $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName, 0, self::getDb()->unencodedData);
