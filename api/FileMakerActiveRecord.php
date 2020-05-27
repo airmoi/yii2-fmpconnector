@@ -411,10 +411,10 @@ class FileMakerActiveRecord extends BaseActiveRecord
             if ($tableSchema->columns[$attribute]->maxRepeat > 1) {
                 $row[$attribute] = [];
                 for ($i = 0; $i <= $tableSchema->columns[$attribute]->maxRepeat; $i++) {
-                    $row[$attribute][$i] = $fmRecord->getField($attributePrefix . $attribute, $i);
+                    $row[$attribute][$i] = $fmRecord->getField($attributePrefix . $attribute, $i, self::getDb()->unencodedData);
                 }
-            } else {
-                $row[$attribute] = $fmRecord->getField($attributePrefix . $attribute);
+            } elseif (in_array($attribute, $fmFields)) {
+                $row[$attribute] = $fmRecord->getField($attributePrefix . $attribute, 0, self::getDb()->unencodedData);
             }
         }
 
@@ -466,7 +466,9 @@ class FileMakerActiveRecord extends BaseActiveRecord
 
         $row = [];
         foreach (array_keys($tableSchema->columns) as $fieldName) {
-            $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName);
+            if (in_array($tableSchema->name . '::' . $fieldName,$fmFields )) {
+                $row[$fieldName] = $record->getField($tableSchema->name . '::' . $fieldName, 0, self::getDb()->unencodedData);
+            }
         }
 
         parent::populateRecord($model, $row);
