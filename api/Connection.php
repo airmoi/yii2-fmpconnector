@@ -19,6 +19,21 @@ use yii\base\UnknownMethodException;
  * @method Schema getSchema()
  * @method TableSchema getTableSchema($name, $refresh = false)
  *
+ * FmpHelper's methods
+ * @method bool performScript($scriptName, array $params) {
+ *  @see FmpHelper::performScript();
+ * }
+ * @method bool getScriptError($scriptName, array $params) {
+ *  @see FmpHelper::getScriptError();
+ * }
+ * @method bool getScriptErrorDescription($scriptName, array $params) {
+ *  @see FmpHelper::getScriptErrorDescription();
+ * }
+ * @method bool getScriptResult($scriptName, array $params) {
+ *  @see FmpHelper::getScriptResult();
+ * }
+ *
+ * PHP API methods
  * @method string getAPIVersion() Returns the version of the FileMaker API for PHP.
  * @method string getContainerData($url) Returns the data for the specified container field.
  * @method string getContainerDataURL($url) Returns the fully qualified URL for the specified container field.
