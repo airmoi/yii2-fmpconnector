@@ -41,17 +41,17 @@ $layoutList = $tableSchema->layouts;
         return Yii::$app->get('<?= $generator->db ?>');
     }
 <?php endif; ?>
-    
+
     /**
      * @return array An array of [ attributeName => valueListName ]
      */
     public function attributeValueLists()
     {
         return [
-<?php foreach ($tableSchema->columns as $column): 
+<?php foreach ($tableSchema->columns as $column):
         if ($column->valueList !== null): ?>
             '<?= $column->name ?>' => '<?= $column->valueList ?>',
-<?php   endif;   
+<?php   endif;
     endforeach; ?>
         ];
     }
@@ -74,8 +74,4 @@ $layoutList = $tableSchema->layouts;
         ];
     }
 }
-
-<?php foreach ($relations as $name => $relation): ?>
-<?= $generator->render('_related_model.php', ['generator' => $generator, 'relationName' => $name, 'tableSchema' => $relation]) ?>
-<?php endforeach; ?>
 
