@@ -13,7 +13,6 @@ $valueLists = $tableSchema->valueLists;
 $layoutList = $tableSchema->layouts;
 ?>
 
-
 <?php $rules = $generator->generateRules($tableSchema) ?>
 /**
  * This is the model class for related records "<?= $generator->generateTableName($relationName) ?>".
@@ -25,7 +24,7 @@ $layoutList = $tableSchema->layouts;
  * @property <?= ucfirst($name) .($relation->isPortal ? '[]' : '' ) . ' $' . lcfirst($name) . "\n" ?>
 <?php endforeach; ?>
  */
- class <?= ucfirst($relationName) ?> extends FileMakerRelatedRecord
+class <?= ucfirst($relationName) ?> extends FileMakerRelatedRecord
 {
     /**
      * @var string name of the default layout the relation is accessible from
@@ -41,20 +40,21 @@ $layoutList = $tableSchema->layouts;
         return Yii::$app->get('<?= $generator->db ?>');
     }
 <?php endif; ?>
-    
+
     /**
      * @return array An array of [ attributeName => valueListName ]
      */
     public function attributeValueLists()
     {
         return [
-<?php foreach ($tableSchema->columns as $column): 
+<?php foreach ($tableSchema->columns as $column):
         if ($column->valueList !== null): ?>
             '<?= $column->name ?>' => '<?= $column->valueList ?>',
-<?php   endif;   
+<?php   endif;
     endforeach; ?>
         ];
     }
+
     /**
      * @inheritdoc
      */
@@ -62,6 +62,7 @@ $layoutList = $tableSchema->layouts;
     {
         return [<?= "\n            " . implode(",\n            ", $rules) . "\n        " ?>];
     }
+
     /**
      * @inheritdoc
      */
@@ -78,4 +79,3 @@ $layoutList = $tableSchema->layouts;
 <?php foreach ($relations as $name => $relation): ?>
 <?= $generator->render('_related_model.php', ['generator' => $generator, 'relationName' => $name, 'tableSchema' => $relation]) ?>
 <?php endforeach; ?>
-

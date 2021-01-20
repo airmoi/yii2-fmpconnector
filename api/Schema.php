@@ -54,7 +54,7 @@ class Schema extends \yii\db\Schema
         'text' => self::TYPE_STRING,
         'date' => self::TYPE_DATE,
         'time' => self::TYPE_TIME,
-        'timestamp' => self::TYPE_DATETIME,
+        'timestamp' => self::TYPE_TIMESTAMP,
         'container' => self::TYPE_BINARY,
 
     ];
@@ -372,10 +372,10 @@ class Schema extends \yii\db\Schema
             // abstract type => php type
             'text' => 'string',
             'number' => 'integer',
-            'container' => 'resource',
-            'date' => 'date',
-            'time' => 'time',
-            'timestamp' => 'timestamp',
+            'container' => 'string',
+            'date' => 'string',
+            'time' => 'string',
+            'timestamp' => 'string',
         ];
         if (isset($typeMap[$type])) {
             return $typeMap[$type];
@@ -433,7 +433,7 @@ class Schema extends \yii\db\Schema
         /*$command = $this->db->createCommand()->insert($table, $columns);
         $tableSchema = $this->getTableSchema($table);
         $result = [];
-        foreach ($tableSchema->primaryKey as $name) {  
+        foreach ($tableSchema->primaryKey as $name) {
                 $result[$name] = $this->getLastInsertID($table);
         }
         return $result;*/
