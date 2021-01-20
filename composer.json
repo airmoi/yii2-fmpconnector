@@ -20,7 +20,8 @@
             "airmoi\\yii2fmconnector\\db\\": "odbc/",
             "airmoi\\yii2fmconnector\\api\\": "api/",
             "airmoi\\yii2fmconnector\\gii\\odbc\\crud\\": "gii/odbc/templates/crud/",
-            "airmoi\\yii2fmconnector\\gii\\api\\crud\\": "gii/api/templates/crud/"
+            "airmoi\\yii2fmconnector\\gii\\api\\crud\\": "gii/api/templates/crud/",
+            "airmoi\\yii2fmconnector\\gii\\api\\nuxt\\": "gii/api/templates/nuxt/"
         }
     },
     "repositories":[
