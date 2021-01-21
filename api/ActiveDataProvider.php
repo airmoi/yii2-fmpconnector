@@ -90,7 +90,7 @@ class ActiveDataProvider extends \yii\data\BaseDataProvider
         if (($pagination = $this->getPagination()) !== false) {
             //Dirty hack : force page n° as totalcount is already returned by FileMaker PHP-API
             $pagination->setPage(Yii::$app->getRequest()->getQueryParam($pagination->pageParam, 1)-1, false);
-            $this->query->limit($pagination->getLimit())->offset($pagination->getOffset());
+            $this->query->limit($pagination->getLimit())->offset($pagination->getOffset()+1);
         }
         if (($sort = $this->getSort()) !== false) {
             $this->query->addOrderBy($sort->getOrders());
