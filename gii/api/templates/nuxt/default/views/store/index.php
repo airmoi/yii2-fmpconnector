@@ -24,6 +24,10 @@ export const state = () => ({
   lastError: null,
   isInitialized: false,
   isLoading: true,
+  pagination: {
+    page: 1,
+    itemsPerPage: 10,
+  },
 });
 
 export const mutations = {
@@ -32,6 +36,9 @@ export const mutations = {
   },
   SET_LOADING(state, status) {
     state.isLoading = status;
+  },
+  SET_PAGINATION(state, pagination) {
+    state.pagination = pagination;
   },
   SET_RECORD(state, record) {
     const index = this.records.indexOf(record);
@@ -57,13 +64,23 @@ export const mutations = {
 };
 
 export const actions = {
-  init({ dispatch, commit }) {
-    return dispatch('load', 1).then(() => {
+  init({ dispatch, commit, state }) {
+    return dispatch('load', state.pagination).then(() => {
       commit(`SET_INITIALIZED`, true);
     });
   },
-  load({ commit }, options) {
+  load({ commit, state }, options) {
     const { sortBy, sortDesc, page, itemsPerPage } = options;
+    if (
+      state.isInitialized &&
+      state.pagination.page === page &&
+      state.pagination.itemsPerPage === itemsPerPage
+    ) {
+      return new Promise(
+        () => {},
+        () => {}
+      ).then();
+    }
     commit(`SET_LOADING`, true);
     return this.\$axios
       .get(`{$controllerId}?page=\${page}&per-page=\${itemsPerPage}`)
@@ -72,6 +89,7 @@ export const actions = {
           `SET_RECORD_COUNT`,
           parseInt(res.headers[`x-pagination-total-count`])
         );
+        commit(`SET_PAGINATION`, options);
         commit(`SET_RECORDS`, res.data);
       })
       .catch((e) => {

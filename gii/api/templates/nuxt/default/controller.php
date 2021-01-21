@@ -33,6 +33,7 @@ use Yii;
 use sizeg\jwt\JwtHttpBearerAuth;
 use <?= ltrim($generator->modelClass, '\\') ?>;
 use <?= ltrim($generator->baseControllerClass, '\\') ?>;
+use airmoi\yii2fmconnector\api\ActiveDataProvider;
 
 /**
  * <?= $controllerClass ?> implements the CRUD actions for <?= $modelClass ?> model.
@@ -40,6 +41,14 @@ use <?= ltrim($generator->baseControllerClass, '\\') ?>;
 class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->baseControllerClass) . "\n" ?>
 {
     public $modelClass = <?= $modelClass ?>::class;
+
+    public function actions()
+    {
+        $actions = parent::actions();
+        $actions['index']['prepareDataProvider'] = [$this, 'prepareDataProvider'];
+
+        return $actions;
+    }
 
     /**
      * @return array
@@ -64,5 +73,36 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
     public function checkAccess($action, $model = null, $params = [])
     {
         return true;
+    }
+
+    /**
+     * Prepares the data provider that should return the requested collection of the models.
+     * @return ActiveDataProvider
+     */
+    public function prepareDataProvider($action, $filter)
+    {
+        $requestParams = Yii::$app->getRequest()->getBodyParams();
+        if (empty($requestParams)) {
+            $requestParams = Yii::$app->getRequest()->getQueryParams();
+        }
+
+        /* @var $modelClass \yii\db\BaseActiveRecord */
+        $modelClass = $action->modelClass;
+
+        $query = $modelClass::find();
+        if (!empty($filter)) {
+            $query->andWhere($filter);
+        }
+
+        return Yii::createObject([
+            'class' => ActiveDataProvider::class,
+            'query' => $query,
+            'pagination' => [
+                'params' => $requestParams,
+            ],
+            'sort' => [
+                'params' => $requestParams,
+            ],
+        ]);
     }
 }
