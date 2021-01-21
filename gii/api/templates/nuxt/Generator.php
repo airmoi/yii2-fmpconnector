@@ -14,6 +14,7 @@ use yii\helpers\Inflector;
 use airmoi\yii2fmconnector\api\Schema;
 use yii\gii\CodeFile;
 use yii\helpers\StringHelper;
+use yii\rest\ActiveController;
 
 /**
  * Generates CRUD
@@ -30,6 +31,11 @@ use yii\helpers\StringHelper;
  */
 class Generator extends \yii\gii\generators\crud\Generator
 {
+    public $modelClass = 'app\models\MyModel';
+    public $baseControllerClass = ActiveController::class;
+    public $controllerClass = 'app\modules\api\modules\v1\controllers\SampleController';
+    public $viewPath = '@app/front';
+
     /**
      * @inheritdoc
      */
