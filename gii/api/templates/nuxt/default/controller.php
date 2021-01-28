@@ -46,6 +46,16 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
     {
         $actions = parent::actions();
         $actions['index']['prepareDataProvider'] = [$this, 'prepareDataProvider'];
+        $actions['index']['dataFilter'] = [
+            'class' => \yii\data\ActiveDataFilter::class,
+            'attributeMap' => [
+                'search' => '', //todo: map search filter with a field from you database
+            ],
+            'searchModel' => function () {
+                return (new \yii\base\DynamicModel(['search' => null]))
+                    ->addRule('search', 'string');
+            },
+        ];
 
         return $actions;
     }
@@ -91,7 +101,7 @@ class <?= $controllerClass ?> extends <?= StringHelper::basename($generator->bas
 
         $query = $modelClass::find();
         if (!empty($filter)) {
-            $query->andWhere($filter);
+            $query->andFilterWhere($filter);
         }
 
         return Yii::createObject([

@@ -9,12 +9,18 @@
 namespace airmoi\yii2fmconnector\gii\api\nuxt;
 
 use Yii;
+use \airmoi\yii2fmconnector\api\ColumnSchema;
+use yii\base\InvalidConfigException;
+use yii\db\ActiveRecord;
+use yii\db\BaseActiveRecord;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
 use airmoi\yii2fmconnector\api\Schema;
 use yii\gii\CodeFile;
 use yii\helpers\StringHelper;
 use yii\rest\ActiveController;
+use yii\validators\DefaultValueValidator;
+use yii\validators\Validator;
 
 /**
  * Generates CRUD
@@ -83,54 +89,137 @@ class Generator extends \yii\gii\generators\crud\Generator
         return $files;
     }
 
+    public function generateForm()
+    {
+        $model = new $this->modelClass();
+        $safeAttributes = $model->safeAttributes();
+
+        $form = '';
+        foreach ($this->getColumnNames() as $attribute) {
+            if (in_array($attribute, $safeAttributes)) {
+                $form .= $this->generateFormField($attribute) . "\n";
+            }
+        }
+        return $form;
+    }
     /**
      * Generates code for active field
      * @param string $attribute
      * @return string
      */
-    public function generateActiveField($attribute, $tableShema = null)
+    public function generateFormField($attribute, $tableShema = null)
     {
         $tableSchema = $tableShema === null ? $this->getTableSchema() : $tableShema;
         if($pos = strpos($attribute, '.')){
             $relationName = substr($attribute , 0 , $pos);
             $attribute = substr($attribute, $pos+1);
             $tableSchema = $tableSchema->relations[ $relationName ];
-            $modelVar = '$model->'.$relationName;
+            $modelVar = 'form.'.$relationName;
         } else {
-            $modelVar = '$model';
+            $modelVar = 'form';
         }
 
-        if ($tableSchema === false || !isset($tableSchema->columns[$attribute])) {
-            if (preg_match('/^(password|pass|passwd|passcode)$/i', $attribute)) {
-                return "\$form->field(\$model, '$attribute')->passwordInput()";
-            } else {
-                return "\$form->field(\$model, '$attribute')";
-            }
-        }
+        $label = Inflector::camel2words($attribute);
         $column = $tableSchema->columns[$attribute];
+
+        //Todo : handle file inputs
+        if($column->dbType == 'container') {
+            return;
+        }
         if ($column->valueList) {
-            return "\$form->field(\$model, '$attribute')->dropDownList(\$model->valueList('$attribute'), ['prompt' => 'Select a value' ])";
+            $input = <<<JS
+      <v-select
+        v-model="$modelVar.$attribute"
+        clearable
+        :items="[]"
+        label="$label"
+      ></v-select>
+JS;
         } else {
             if (preg_match('/^(password|pass|passwd|passcode)$/i', $column->name)) {
-                $input = 'passwordInput';
+                $type ="password";
+            } elseif (preg_match('/^(mail|email|e-mail|courriel)$/i', $column->name)) {
+                $type ="email";
+            } elseif ($column->type === 'number') {
+                $type ="number";
             } else {
-                $input = 'textInput';
+                $type = 'text';
             }
-            /* Search if column is a foreign key and generate dropDownList*/
-            /*foreach ( $tableSchema->foreignKeys as $relation) {
-                if ( array_key_exists($attribute, $relation)) {
-                    return "\$form->field(\$model, '$attribute')->dropDownList("
-                    . Inflector::id2camel($relation[0], '_')."::valueList()" .", ['prompt' => ''])";
-                }
-            }*/
+            $input = <<<JS
+      <v-text-field
+        v-model="$modelVar.$attribute"
+        label="$label"
+        type="$type"
+      />
+ JS;
+        }
+        return $input;
+    }
 
-            if ($column->phpType !== 'string' || $column->size === null) {
-                return "\$form->field($modelVar, '$attribute')->$input()";
-            } else {
-                return "\$form->field($modelVar, '$attribute')->$input(['maxlength' => $column->size])";
+    /**
+     * @return false|string
+     */
+    public function generateDataTableHeaders()
+    {
+        /** @var $model ActiveRecord */
+        $model = new $this->modelClass;
+        $attributes = $this->getColumnNames();
+
+        foreach ($attributes as $attribute) {
+            $column = $model::getTableSchema()->getColumn($attribute);
+            $headers[] = [
+                'text' => $model->getAttributeLabel($attribute),
+                'value' => $attribute,
+                'sortable' => $this->isSortableColumn($column),
+            ];
+        }
+        $headers[] = [
+            'text' => 'Actions',
+            'value' => 'actions',
+            'sortable' => false
+        ];
+
+        return json_encode($headers, JSON_PRETTY_PRINT);
+    }
+
+    /**
+     * @return false|string
+     */
+    public function getDefaultRecord()
+    {
+        /** @var $model ActiveRecord */
+        $model = new $this->modelClass;
+        $attributes = $this->getColumnNames();
+        $allValidators = $model->getValidators();
+        $defaultValues = [];
+        foreach ($allValidators as $validator) {
+            if ($validator instanceof DefaultValueValidator && !is_callable($validator->value)) {
+                foreach ($validator->getAttributeNames() as $attribute) {
+                    $defaultValues[$attribute] = $validator->value;
+                }
             }
         }
+
+        $colums = [];
+        foreach ($attributes as $attribute) {
+            $colums[$attribute] = @$defaultValues[$attribute]?:null;
+        }
+
+        return json_encode($colums, JSON_PRETTY_PRINT);
     }
+
+    /**
+     *
+     * @param ColumnSchema $column
+     */
+    public function isSortableColumn(ColumnSchema $column)
+    {
+        return $column->fmType === 'normal'
+            && $column->dbType !== 'container'
+            && !$column->global
+            && !$column->isRelated;
+    }
+
 
     public function generateGridViewColumn($column, $isComment = false, $relationName = null, $repetition = null){
         $commentString = $isComment ? '//' : '' ;
@@ -165,23 +254,6 @@ class Generator extends \yii\gii\generators\crud\Generator
         }
     }
 
-    /**
-     * Generates code namespaces potentially used in views (related models)
-     * @return string
-     */
-    public function generateNamespaces()
-    {
-        $tableSchema = $this->getTableSchema();
-        if ($tableSchema === false) {
-            return ;
-        }
-
-        $models = [];
-        foreach ( $tableSchema->foreignKeys as $relation) {
-            $models[] = "use app\models\\" . Inflector::id2camel($relation[0], '_').";";
-        }
-        return implode ( "\r\n", $models);
-    }
     /**
      * Generates search conditions
      * @return array
@@ -308,10 +380,10 @@ class Generator extends \yii\gii\generators\crud\Generator
     {
         /* @var $class \airmoi\yii2fmconnector\api\FileMakerActiveRecord */
         $class = $this->modelClass;
-        if (is_subclass_of($class, 'airmoi\yii2fmconnector\api\FileMakerActiveRecord')) {
+        if (is_subclass_of($class, BaseActiveRecord::class)) {
             return $class::getTableSchema();
         } else {
-            return false;
+            throw new InvalidConfigException("This code generator expect model class to be an ActiveRecord");
         }
     }
 
@@ -325,15 +397,7 @@ class Generator extends \yii\gii\generators\crud\Generator
         /* @var $class \airmoi\yii2fmconnector\api\FileMakerActiveRecord */
         $class = $this->modelClass;
         if (is_subclass_of($class, 'airmoi\yii2fmconnector\api\FileMakerActiveRecord')) {
-            $colmunNames = $class::getTableSchema()->getColumnNames();
-            $layoutColumns = $class::getDb()->getSchema()->getLayout($class::layoutName())->getFields();
-            $columns = [];
-            foreach ( $colmunNames as $columnName){
-                if (array_key_exists($columnName, $layoutColumns)){
-                    $columns[] = $columnName;
-                }
-            }
-            return $columns;
+            return $class::getTableSchema()->getColumnNames();
         } else {
             /* @var $model \yii\base\Model */
             $model = new $class();
