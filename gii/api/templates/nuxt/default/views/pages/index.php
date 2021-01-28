@@ -4,30 +4,19 @@ use yii\helpers\Inflector;
 use yii\helpers\StringHelper;
 
 /* @var $this yii\web\View */
-/* @var $generator yii\gii\generators\crud\Generator */
+/* @var $generator airmoi\yii2fmconnector\gii\api\nuxt\Generator */
 
 $urlParams = $generator->generateUrlParams();
 $nameAttribute = $generator->getNameAttribute();
 $modelId = Inflector::camel2id(StringHelper::basename($generator->modelClass));
+
 $controllerId = Inflector::camel2id(StringHelper::basename($generator->getControllerID()));
+$controllerName = ucfirst($controllerId);
+
 
 $tableSchema = $generator->getTableSchema();
 
-$attributes = $generator->getColumnNames();
-
-$headers = [];
-foreach ($attributes as $attribute) {
-    $headers[] = [
-        'text' => Inflector::camel2words($attribute),
-        'value' => $attribute
-    ];
-}
-$headers[] = [
-    'text' => 'Actions',
-    'value' => 'actions',
-    'sortable' => false
-];
-$jsonHeaders = json_encode($headers, JSON_PRETTY_PRINT);
+$jsonHeaders = $generator->generateDataTableHeaders();
 
 $body = <<<JS
 <template>
@@ -47,18 +36,34 @@ $body = <<<JS
     >
       <template v-slot:top>
         <v-toolbar flat>
-          <v-toolbar-title>$modelId</v-toolbar-title>
-          <v-divider class="mx-4" inset vertical></v-divider>
+          <v-toolbar-title>dossiers</v-toolbar-title>
           <v-spacer></v-spacer>
+          <v-responsive>
+            <form @submit.prevent="loadData">
+              <v-text-field
+                v-model="search"
+                append-icon="mdi-magnify"
+                label="Search"
+                single-line
+                hide-details
+              ></v-text-field>
+            </form>
+          </v-responsive>
+          <v-spacer></v-spacer>
+          <v-dialog v-model="dialog">
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn color="primary" dark v-bind="attrs" v-on="on">
+                Create {$modelId}
+              </v-btn>
+            </template>
+            <{$controllerId}-form
+              :record="editedItem"
+              :title="formTitle"
+              @save="save(\$event)"
+              @close="close"
+            ></{$controllerId}-form>
+          </v-dialog>
         </v-toolbar>
-        <v-dialog v-model="dialog" max-width="600px">
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn color="primary" dark v-bind="attrs" v-on="on">
-              Create $modelId
-            </v-btn>
-          </template>
-          <{$controllerId}-form @close-dialog="dialog = false"></{$controllerId}-form>
-        </v-dialog>
       </template>
       <template v-slot:item.actions="{ item }">
         <v-icon small class="mr-2" @click="editItem(item)"> mdi-pencil</v-icon>
@@ -72,17 +77,27 @@ $body = <<<JS
 import {$controllerId}Form from '@/components/{$controllerId}/form';
 
 export default {
-  name: '{$controllerId}Index',
+  name: '{$controllerName}Index',
   auth: false,
   components: { {$controllerId}Form },
   data: () => ({
     dialog: false,
     dialogDelete: false,
+    search: null,
     headers: $jsonHeaders,
-    options: {},
+    options: {
+      page: 1,
+      itemsPerPage: 10,
+      sortBy: [],
+      sortDesc: [],
+      groupBy: [],
+      groupDesc: [],
+      mustSort: false,
+      multiSort: false,
+    },
     models: [],
     editedIndex: -1,
-    editedModel: null,
+    editedItem: null,
     error: undefined,
   }),
   computed: {
@@ -117,40 +132,49 @@ export default {
     },
   },
   created() {
-    this.initialize();
+    this.loadData();
   },
   methods: {
-    initialize() {
-      this.\$store.dispatch(`$modelId/init`);
-    },
     loadData() {
-      this.\$store.dispatch(`$modelId/load`, this.options);
+      this.\$store.dispatch(`$modelId/load`, {
+        options: this.options,
+        search: this.search,
+      });
+    },
+    save(item) {
+      const action = item._recid ? 'update' : 'create';
+      this.\$store.dispatch(`$modelId/\${action}`, item).then(() => {
+        if (this.\$store.state.dossiers.lastError) {
+          // Todo display error ?
+        } else {
+          this.close();
+        }
+      });
     },
     editItem(item) {
-      this.editedIndex = this.models.indexOf(item);
       this.editedItem = Object.assign({}, item);
+      this.editedIndex = this.models.indexOf(item);
       this.dialog = true;
     },
     deleteItem(item) {
-      this.editedIndex = this.models.indexOf(item);
       this.editedItem = Object.assign({}, item);
+      this.editedIndex = this.models.indexOf(item);
       this.dialogDelete = true;
     },
     deleteItemConfirm() {
-      this\$store.dispatch(`$modelId/delete`, this.editedIndex);
+      this.\$store.dispatch(`$modelId/delete`, this.editedIndex);
       this.closeDelete();
     },
     close() {
       this.dialog = false;
       this.\$nextTick(() => {
-        // this.editedItem = Object.assign({}, this.defaultItem)
+        this.editedItem = this.\$store.state.$modelId.defaultRecord;
         this.editedIndex = -1;
       });
     },
     closeDelete() {
       this.dialogDelete = false;
       this.\$nextTick(() => {
-        // this.editedItem = Object.assign({}, this.defaultItem)
         this.editedIndex = -1;
       });
     },
