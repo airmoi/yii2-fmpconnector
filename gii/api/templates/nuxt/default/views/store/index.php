@@ -11,6 +11,7 @@ $nameAttribute = $generator->getNameAttribute();
 
 $modelId = Inflector::camel2id(StringHelper::basename($generator->modelClass));
 $controllerId = Inflector::camel2id(StringHelper::basename($generator->getControllerID()));
+
 $singular = strtoupper(Inflector::singularize($modelId));
 $plural = strtoupper(Inflector::pluralize($modelId));
 

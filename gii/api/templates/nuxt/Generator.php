@@ -62,7 +62,7 @@ class Generator extends \yii\gii\generators\crud\Generator
         $folders = [
             'pages' => [$this->controllerID, 'vue'],
             'components' => [$this->controllerID, 'vue'],
-            'store' => [Inflector::camel2id(StringHelper::basename($this->modelClass)), 'js']
+            'store' => [Inflector::camel2id(StringHelper::basename($this->modelClass), '_'), 'js']
         ];
         foreach ($folders as $folder => $ext) {
             $files = ArrayHelper::merge($files, $this->generateViews($folder, $ext));
