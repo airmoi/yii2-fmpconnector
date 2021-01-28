@@ -115,11 +115,19 @@ Add these lines to gii module config to enhance model and CRUD generators
         ]
     ],
      'crud' => [ // generator name
-        'class' => 'airmoi\yii2fmconnector\gii\api\crud\Generator', // generator class
+        'class' => airmoi\yii2fmconnector\gii\api\crud\Generator::class, // generator class
         /*'templates' => [ //setting for out templates
             'myCrud' => '@app/myTemplates/crud/default', // template name => path to template
         ]*/
     ]
+],
+```
+
+There is also a CRUD generator for NUXT
+try this class instead :
+```php
+'crud' => [ // generator name
+'class' => airmoi\yii2fmconnector\gii\api\nuxt\Generator::class, // generator class
 ],
 ```
 
