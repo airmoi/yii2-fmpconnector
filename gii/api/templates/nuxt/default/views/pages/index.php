@@ -8,11 +8,14 @@ use yii\helpers\StringHelper;
 
 $urlParams = $generator->generateUrlParams();
 $nameAttribute = $generator->getNameAttribute();
-$modelId = Inflector::camel2id(StringHelper::basename($generator->modelClass));
 
-$controllerId = Inflector::camel2id(StringHelper::basename($generator->getControllerID()));
-$controllerName = ucfirst($controllerId);
+$modelClass = StringHelper::basename($generator->modelClass);
+$modelId = Inflector::camel2id($modelClass);
+$storeId = Inflector::camel2id($modelClass, '_');
+$moduleName = Inflector::camel2words($modelClass);
 
+$controllerId = $generator->getControllerID();
+$controllerName = Inflector::id2camel($controllerId);
 
 $tableSchema = $generator->getTableSchema();
 
@@ -36,7 +39,7 @@ $body = <<<JS
     >
       <template v-slot:top>
         <v-toolbar flat>
-          <v-toolbar-title>dossiers</v-toolbar-title>
+          <v-toolbar-title>$moduleName</v-toolbar-title>
           <v-spacer></v-spacer>
           <v-responsive>
             <form @submit.prevent="loadData">
@@ -53,7 +56,7 @@ $body = <<<JS
           <v-dialog v-model="dialog">
             <template v-slot:activator="{ on, attrs }">
               <v-btn color="primary" dark v-bind="attrs" v-on="on">
-                Create {$modelId}
+                Create {$moduleName}
               </v-btn>
             </template>
             <{$controllerId}-form
@@ -74,12 +77,12 @@ $body = <<<JS
 </template>
 
 <script>
-import {$controllerId}Form from '@/components/{$controllerId}/form';
+import {$controllerName}Form from '@/components/{$controllerId}/form';
 
 export default {
   name: '{$controllerName}Index',
   auth: false,
-  components: { {$controllerId}Form },
+  components: { {$controllerName}Form },
   data: () => ({
     dialog: false,
     dialogDelete: false,
@@ -102,19 +105,19 @@ export default {
   }),
   computed: {
     records() {
-      return this.\$store.state.$modelId.records;
+      return this.\$store.state.$storeId.records;
     },
     totalRecords() {
-      return this.\$store.state.$modelId.totalRecords;
+      return this.\$store.state.$storeId.totalRecords;
     },
     isLoading() {
-      return this.\$store.state.$modelId.isLoading;
+      return this.\$store.state.$storeId.isLoading;
     },
     isInitialized() {
-      return this.\$store.state.$modelId.isInitialized;
+      return this.\$store.state.$storeId.isInitialized;
     },
     formTitle() {
-      return this.editedIndex === -1 ? 'New $modelId' : 'Edit $modelId';
+      return this.editedIndex === -1 ? 'New $moduleName' : 'Edit $moduleName';
     },
   },
   watch: {
@@ -136,15 +139,15 @@ export default {
   },
   methods: {
     loadData() {
-      this.\$store.dispatch(`$modelId/load`, {
+      this.\$store.dispatch(`$storeId/load`, {
         options: this.options,
         search: this.search,
       });
     },
     save(item) {
       const action = item._recid ? 'update' : 'create';
-      this.\$store.dispatch(`$modelId/\${action}`, item).then(() => {
-        if (this.\$store.state.dossiers.lastError) {
+      this.\$store.dispatch(`$storeId/\${action}`, item).then(() => {
+        if (this.\$store.state.$storeId.lastError) {
           // Todo display error ?
         } else {
           this.close();
@@ -162,13 +165,13 @@ export default {
       this.dialogDelete = true;
     },
     deleteItemConfirm() {
-      this.\$store.dispatch(`$modelId/delete`, this.editedIndex);
+      this.\$store.dispatch(`$storeId/delete`, this.editedIndex);
       this.closeDelete();
     },
     close() {
       this.dialog = false;
       this.\$nextTick(() => {
-        this.editedItem = this.\$store.state.$modelId.defaultRecord;
+        this.editedItem = this.\$store.state.$storeId.defaultRecord;
         this.editedIndex = -1;
       });
     },
