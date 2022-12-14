@@ -79,6 +79,7 @@ class FmpHelper extends Component
     public $enableLogging = false;
     public $logLevel = FileMaker::LOG_ERR;
     public $useDataApi = false;
+    public $useDateFormatInRequests = false;
 
     /** @var FileMaker */
     private $_fm;
@@ -116,6 +117,7 @@ class FmpHelper extends Component
             $this->_fm->setProperty('enableProfiling', $this->enableProfiling);
             $this->_fm->setProperty('logLevel', $this->logLevel);
             $this->_fm->setProperty('useDataApi', $this->useDataApi);
+            $this->_fm->setProperty('useDateFormatInRequests', $this->useDateFormatInRequests);
 
             if ($this->cache) {
                 $this->_fm->setCache(Yii::$app->get($this->cache));
