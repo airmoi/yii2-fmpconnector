@@ -199,7 +199,7 @@ class FmpHelper extends Component
         if ($data instanceof \SimpleXMLElement) {
             $xml = $data;
         } else {
-            if (substr($data, 0, 5) != '<?xml') {
+            if (substr((string)$data, 0, 5) != '<?xml') {
                 $data = "<?xml version='1.0' standalone='yes'?><body>" . $data . "</body>";
             }
             if (!$xml = simplexml_load_string($data, 'SimpleXMLElement', LIBXML_NOCDATA)) {
