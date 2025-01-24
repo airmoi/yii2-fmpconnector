@@ -196,7 +196,7 @@ class FmpHelper extends Component
      */
     public static function xmlget($data, $tag, $i = 0)
     {
-        if (isempty($data)) {
+        if (empty($data)) {
             return "";
         } elseif ($data instanceof \SimpleXMLElement) {
             $xml = $data;
