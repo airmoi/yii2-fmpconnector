@@ -29,7 +29,7 @@ use yii\base\UnknownMethodException;
  * @method bool getScriptErrorDescription($scriptName, array $params) {
  *  @see FmpHelper::getScriptErrorDescription();
  * }
- * @method bool getScriptResult($scriptName, array $params) {
+ * @method bool getScriptResult() {
  *  @see FmpHelper::getScriptResult();
  * }
  *
