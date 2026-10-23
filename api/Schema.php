@@ -338,15 +338,16 @@ class Schema extends \yii\db\Schema
                     $column = $this->loadColumnSchema($field);
                     //handle related Fields from different OT
                     if ($column->isRelated && $column->relationName != $tableSchema->name) {
-                        if (!isset($tableSchema->relations[$column->relationName])) {
+                        if (!isset($table->relations[$column->relationName])) {
                             $relatedSchema = new TableSchema();
                             $relatedSchema->name = $relatedSchema->fullName = $column->relationName;
                             $relatedSchema->defaultLayout = $table->defaultLayout;
-                            $tableSchema->relations[$column->relationName] = $relatedSchema;
+                            $table->relations[$column->relationName] = $relatedSchema;
                         } else {
-                            $relatedSchema = $tableSchema->relations[$column->relationName];
+                            $relatedSchema = $table->relations[$column->relationName];
                         }
 
+                        $tableSchema->relations[$column->relationName] = $relatedSchema;
                         if (!isset($relatedSchema->columns[$column->name])) {
                             $relatedSchema->columns[$column->name] = $column;
                         }

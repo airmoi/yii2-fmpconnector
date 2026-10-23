@@ -88,6 +88,11 @@ class Connection extends \yii\db\Connection
         ]
     ];
 
+    /**
+     * @var bool default false : disable html encoding of field values
+     */
+    public $unencodedData = false;
+
     public $options = [];
 
     /**
