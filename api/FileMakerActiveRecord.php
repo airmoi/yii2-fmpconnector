@@ -66,6 +66,8 @@ class FileMakerActiveRecord extends BaseActiveRecord
      */
     protected $_attributes;
 
+    protected $_recid;
+
 
     /**
      *
@@ -168,7 +170,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
      * @inheritdoc
      * @return static[]
      */
-    public static function findAll($condition = [], callable $callback = null, $layout = null)
+    public static function findAll($condition = [], ?callable $callback = null, $layout = null)
     {
         $query = static::find($layout);
         $query->andWhere($condition);
