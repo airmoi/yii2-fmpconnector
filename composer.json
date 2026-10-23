@@ -2,7 +2,13 @@
     "name": "airmoi/yii2-fmconnector",
     "description": "FileMaker ODBC and PHP-API integration",
     "type": "yii2-extension",
-    "keywords": ["yii2","extension","filemaker","ODBC", "FileMaker API-PHP"],
+    "keywords": [
+        "yii2",
+        "extension",
+        "filemaker",
+        "ODBC",
+        "FileMaker API-PHP"
+    ],
     "license": "MIT",
     "authors": [
         {
@@ -10,10 +16,10 @@
             "email": "romain@1-more-thing.com"
         }
     ],
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "require": {
         "yiisoft/yii2": "*@stable",
-        "airmoi/filemaker": "dev-dataAPI"
+        "airmoi/filemaker": "^3.1"
     },
     "autoload": {
         "psr-4": {
@@ -23,7 +29,7 @@
             "airmoi\\yii2fmconnector\\gii\\api\\crud\\": "gii/api/templates/crud/"
         }
     },
-    "repositories":[
+    "repositories": [
         {
             "type": "git",
             "url": "https://github.com/airmoi/yii2-fmpconnector.git"
