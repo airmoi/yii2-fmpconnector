@@ -48,14 +48,12 @@ use yii\base\UnknownMethodException;
  * @method \airmoi\FileMaker\Command\FindRequest newFindRequest($layout) Creates a new FindRequest object.
  * @method \airmoi\FileMaker\Command\PerformScript newPerformScriptCommand($layout, $scriptName, $scriptParameters = null) Creates a new PerformScript object.
  *
- * @method string getLastRequestedUrl() Last URL call to xml engine.
+ * @method string getLastRequestedUrl() Last URL call to web publishing engine.
  *
  * @method null setProperty($prop, $value) Sets a property to a new value for all API calls.
  */
 class FmpHelper extends Component
 {
-
-
     public $resultLayout = "PHP_scriptResult";
     public $resultField = "PHP_scriptResult";
     public $valueListLayout = "PHP_valueLists";
@@ -76,9 +74,12 @@ class FmpHelper extends Component
     public $cache = null;
     public $schemaCache = true;
     public $schemaCacheDuration = null;
+    public $sessionHandler = null;
     public $enableProfiling = false;
     public $enableLogging = false;
     public $logLevel = FileMaker::LOG_ERR;
+    public $useDataApi = false;
+    public $useDateFormatInRequests = false;
 
     /** @var FileMaker */
     private $_fm;
@@ -115,6 +116,8 @@ class FmpHelper extends Component
             $this->_fm->setProperty('schemaCacheDuration', $this->schemaCacheDuration);
             $this->_fm->setProperty('enableProfiling', $this->enableProfiling);
             $this->_fm->setProperty('logLevel', $this->logLevel);
+            $this->_fm->setProperty('useDataApi', $this->useDataApi);
+            $this->_fm->setProperty('useDateFormatInRequests', $this->useDateFormatInRequests);
 
             if ($this->cache) {
                 $this->_fm->setCache(Yii::$app->get($this->cache));
@@ -122,6 +125,9 @@ class FmpHelper extends Component
 
             if ($this->enableLogging) {
                 $this->_fm->setLogger(new Logger());
+            }
+            if ($this->sessionHandler) {
+                $this->_fm->setSessionHandler($this->sessionHandler);
             }
         }
     }
@@ -163,8 +169,12 @@ class FmpHelper extends Component
             $result = $cmd->execute();
 
             Yii::endProfile("Perform script '$scriptName' with params '$scriptParameters'", 'yii\db\Command::query');
-            $record = $result->getFirstRecord();
-            $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
+            if (!$this->useDataApi) {
+                $record = $result->getFirstRecord();
+                $this->_scriptResult = html_entity_decode($record->getField($this->resultField));
+            } else {
+                $this->_scriptResult = @$result['scriptResult'];
+            }
             $this->endConnection();
             return true;
         }
@@ -186,10 +196,12 @@ class FmpHelper extends Component
      */
     public static function xmlget($data, $tag, $i = 0)
     {
-        if ($data instanceof \SimpleXMLElement) {
+        if (empty($data)) {
+            return "";
+        } elseif ($data instanceof \SimpleXMLElement) {
             $xml = $data;
         } else {
-            if (substr($data, 0, 5) != '<?xml') {
+            if (substr((string)$data, 0, 5) != '<?xml') {
                 $data = "<?xml version='1.0' standalone='yes'?><body>" . $data . "</body>";
             }
             if (!$xml = simplexml_load_string($data, 'SimpleXMLElement', LIBXML_NOCDATA)) {

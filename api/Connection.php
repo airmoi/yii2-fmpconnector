@@ -19,6 +19,21 @@ use yii\base\UnknownMethodException;
  * @method Schema getSchema()
  * @method TableSchema getTableSchema($name, $refresh = false)
  *
+ * FmpHelper's methods
+ * @method bool performScript($scriptName, array $params) {
+ *  @see FmpHelper::performScript();
+ * }
+ * @method bool getScriptError($scriptName, array $params) {
+ *  @see FmpHelper::getScriptError();
+ * }
+ * @method bool getScriptErrorDescription($scriptName, array $params) {
+ *  @see FmpHelper::getScriptErrorDescription();
+ * }
+ * @method bool getScriptResult() {
+ *  @see FmpHelper::getScriptResult();
+ * }
+ *
+ * PHP API methods
  * @method string getAPIVersion() Returns the version of the FileMaker API for PHP.
  * @method string getContainerData($url) Returns the data for the specified container field.
  * @method string getContainerDataURL($url) Returns the fully qualified URL for the specified container field.
@@ -54,6 +69,7 @@ use yii\base\UnknownMethodException;
  * @method string getLastRequestedUrl() Last URL call to xml engine.
  *
  * @method null setProperty($prop, $value) Sets a property to a new value for all API calls.
+ * @method null getProperty($prop) get FileMaker API property Value.
  */
 class Connection extends \yii\db\Connection
 {
@@ -140,7 +156,8 @@ class Connection extends \yii\db\Connection
                 'schemaCacheDuration' => $this->schemaCacheDuration,
                 'cache' => $this->schemaCache,
                 'enableProfiling' => $this->enableProfiling,
-                'enableLogging' => $this->enableLogging
+                'enableLogging' => $this->enableLogging,
+                'sessionHandler' => $this->getSessionHandler(),
             ]
         );
         return new FmpHelper($config);
@@ -163,6 +180,13 @@ class Connection extends \yii\db\Connection
 
         if (empty($this->dbName)) {
             throw new \Exception("Please provide a DB Name");
+        }
+    }
+
+    public function getSessionHandler()
+    {
+        if (Yii::$app instanceof yii\web\Application) {
+            return Yii::$app->session;
         }
     }
 

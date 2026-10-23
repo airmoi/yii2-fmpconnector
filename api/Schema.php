@@ -54,7 +54,7 @@ class Schema extends \yii\db\Schema
         'text' => self::TYPE_STRING,
         'date' => self::TYPE_DATE,
         'time' => self::TYPE_TIME,
-        'timestamp' => self::TYPE_DATETIME,
+        'timestamp' => self::TYPE_TIMESTAMP,
         'container' => self::TYPE_BINARY,
 
     ];
@@ -107,7 +107,7 @@ class Schema extends \yii\db\Schema
                 Yii::beginProfile($token, __METHOD__);
 
                 $this->_layout[$layoutName] = $this->db->getLayout($layoutName);
-                $this->_layout[$layoutName]->loadExtendedInfo();
+                //$this->_layout[$layoutName]->loadExtendedInfo();
 
                 Yii::info($this->db->getLastRequestedUrl(), __METHOD__);
             } catch (FileMakerException $e) {
@@ -373,10 +373,10 @@ class Schema extends \yii\db\Schema
             // abstract type => php type
             'text' => 'string',
             'number' => 'integer',
-            'container' => 'resource',
-            'date' => 'date',
-            'time' => 'time',
-            'timestamp' => 'timestamp',
+            'container' => 'string',
+            'date' => 'string',
+            'time' => 'string',
+            'timestamp' => 'string',
         ];
         if (isset($typeMap[$type])) {
             return $typeMap[$type];
