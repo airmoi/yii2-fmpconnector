@@ -26,7 +26,7 @@ class PDO extends \PDO
         if(($pos=strpos($dsn, ':'))!==false)
             $dsn =  strtolower(substr($dsn, $pos+1, strlen($dsn)-$pos));
         
-        if ( !$this->_db = @odbc_connect($dsn, utf8_decode($username), $password))
+        if ( !$this->_db = @odbc_connect($dsn, $this->decodeUtf8($username), $password))
             $this->throwErrors();
         
         //odbc_longreadlen($this->_db, 1000000) ;//1024*1024*30);
@@ -36,6 +36,7 @@ class PDO extends \PDO
      * 
      * @return bool
      */
+    #[\ReturnTypeWillChange]
     public function  beginTransaction ( ){
         if (!odbc_autocommit($this->_db, FALSE))
             $this->throwErrors();
@@ -46,6 +47,7 @@ class PDO extends \PDO
      * 
      * @return bool
      */
+    #[\ReturnTypeWillChange]
     public function commit () {
         if (!odbc_commit($this->_db))
             $this->throwErrors();
@@ -55,6 +57,7 @@ class PDO extends \PDO
     * 
     * @return string
     */
+    #[\ReturnTypeWillChange]
     public function errorCode ( ) {
         return odbc_error($this->_db);
     }
@@ -62,6 +65,7 @@ class PDO extends \PDO
      * 
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function  errorInfo (  ){
         return array(odbc_error($this->_db), odbc_error($this->_db), odbc_errormsg($this->_db));
     }
@@ -70,6 +74,7 @@ class PDO extends \PDO
      * @param string $statement the SQL query
      * @return int number of affected rows
      */
+    #[\ReturnTypeWillChange]
     public function  exec (  $statement ) {
         
         if ( ! $res = odbc_exec($this->_db, $statement))
@@ -83,6 +88,7 @@ class PDO extends \PDO
      * @param type $attribute
      * @return type
      */
+    #[\ReturnTypeWillChange]
     public function  getAttribute (  $attribute ) {
         return null;
     }
@@ -90,6 +96,7 @@ class PDO extends \PDO
      * 
      * @return bool
      */
+    #[\ReturnTypeWillChange]
     public function  inTransaction ( ) {
         return !odbc_autocommit($this->_db);
     }
@@ -97,6 +104,7 @@ class PDO extends \PDO
     /**
      * NOT Supported
      */
+    #[\ReturnTypeWillChange]
     public function  lastInsertId ($name= null ) {
        return null ;
     }
@@ -107,30 +115,38 @@ class PDO extends \PDO
      * @param array $driver_options 
      * @return pdoODBCStatement
      */
+    #[\ReturnTypeWillChange]
     public function prepare (  $statement , $driver_options = array() ) {
-        $this->_query = utf8_decode($statement);
+        $this->_query = $this->decodeUtf8($statement);
         if (!$stmt = @odbc_prepare($this->_db, $this->_query))
             $this->throwErrors();
        return new PDOStatement($stmt, $this->_db, $this->_query); 
     }
     
-    public function  query (  $statement ) {
+    #[\ReturnTypeWillChange]
+    public function  query (  $statement, $fetch_mode = null, ...$fetch_mode_args ) {
         if (!$stmt = @odbc_exec($this->_db, $statement))
              $this->throwErrors();
-       return new PDOStatement($stmt, $this->_db, $statement); 
+        $statement = new PDOStatement($stmt, $this->_db, $statement);
+        if ($fetch_mode !== null) {
+            $statement->setFetchMode($fetch_mode, ...$fetch_mode_args);
+        }
+        return $statement;
     }
     
     /**
      * @return bool
      */
+    #[\ReturnTypeWillChange]
     public function   rollBack (  ) {
         if (!$result = odbc_rollback($this->_db))
             $this->throwErrors();
-       return new pdoODBCStatement($stmt, $this->_db); 
+        return true;
     }
     /**
      * @return bool
      */
+    #[\ReturnTypeWillChange]
     public function  setAttribute (  $attribute ,  $value ) {
         return false;
     }
@@ -141,6 +157,75 @@ class PDO extends \PDO
             throw new \yii\db\Exception(odbc_errormsg(). ' ('. odbc_error(). ')');
         if ( odbc_errormsg($this->_db))
             throw new \yii\db\Exception(odbc_errormsg($this->_db). ' ('. odbc_error($this->_db). ')');
+    }
+
+    private function decodeUtf8($value)
+    {
+        if (function_exists('mb_convert_encoding')) {
+            return mb_convert_encoding($value, 'ISO-8859-1', 'UTF-8');
+        }
+
+        if (function_exists('iconv')) {
+            $converted = @iconv('UTF-8', 'ISO-8859-1', $value);
+            if ($converted !== false) {
+                return $converted;
+            }
+        }
+
+        $converted = '';
+        $length = strlen($value);
+        for ($i = 0; $i < $length; $i++) {
+            $first = ord($value[$i]);
+            if ($first <= 0x7f) {
+                $converted .= $value[$i];
+                continue;
+            }
+
+            if ($first >= 0xc2 && $first <= 0xdf) {
+                $sequenceLength = 2;
+                $codepoint = $first & 0x1f;
+            } elseif ($first >= 0xe0 && $first <= 0xef) {
+                $sequenceLength = 3;
+                $codepoint = $first & 0x0f;
+            } elseif ($first >= 0xf0 && $first <= 0xf4) {
+                $sequenceLength = 4;
+                $codepoint = $first & 0x07;
+            } else {
+                $converted .= '?';
+                continue;
+            }
+
+            if ($i + $sequenceLength > $length) {
+                $converted .= '?';
+                continue;
+            }
+
+            $valid = true;
+            for ($j = 1; $j < $sequenceLength; $j++) {
+                $next = ord($value[$i + $j]);
+                if (($next & 0xc0) !== 0x80) {
+                    $valid = false;
+                    break;
+                }
+                $codepoint = ($codepoint << 6) | ($next & 0x3f);
+            }
+
+            $minimum = [2 => 0x80, 3 => 0x800, 4 => 0x10000][$sequenceLength];
+            if (
+                !$valid
+                || $codepoint < $minimum
+                || $codepoint > 0x10ffff
+                || ($codepoint >= 0xd800 && $codepoint <= 0xdfff)
+            ) {
+                $converted .= '?';
+                continue;
+            }
+
+            $converted .= $codepoint <= 0xff ? chr($codepoint) : '?';
+            $i += $sequenceLength - 1;
+        }
+
+        return $converted;
     }
 }
 
@@ -154,6 +239,8 @@ class PDOStatement extends \PDOStatement {
     private $_lastError;
     private $_lastErrorMessage;
     private $_rowCount = 0;
+    private $_fetchArgs;
+    private $_ctor_args;
     /* Méthodes */
 
     /**
@@ -174,6 +261,7 @@ class PDOStatement extends \PDOStatement {
      * @param mixed $driverdata
      * @return boolean
      */
+    #[\ReturnTypeWillChange]
     public function bindColumn (  $column ,  &$param ,  $type = null ,  $maxlen = null ,  $driverdata = null ) {
       return false;  
     }
@@ -186,6 +274,7 @@ class PDOStatement extends \PDOStatement {
      * @param type $driver_options
      * @return boolean
      */
+    #[\ReturnTypeWillChange]
     public function bindParam (  $parameter ,  &$variable ,  $data_type = PDO::PARAM_STR ,  $length = null,  $driver_options= null ) {
         return false;
     }
@@ -196,6 +285,7 @@ class PDOStatement extends \PDOStatement {
      * @param int $data_type
      * @return boolean
      */
+    #[\ReturnTypeWillChange]
     public function  bindValue (  $parameter ,  $value , $data_type = PDO::PARAM_STR  ) {
         return false;
     }
@@ -203,6 +293,7 @@ class PDOStatement extends \PDOStatement {
      * 
      * @return boolean
      */
+    #[\ReturnTypeWillChange]
     public function  closeCursor (  ) {
         return odbc_free_result($this->_statement);
     }
@@ -210,6 +301,7 @@ class PDOStatement extends \PDOStatement {
      * 
      * @return int
      */
+    #[\ReturnTypeWillChange]
     public function  columnCount (  ){
         return odbc_num_fields($this->_statement);
     }
@@ -217,6 +309,7 @@ class PDOStatement extends \PDOStatement {
      * Not implemented
      * @return null
      */
+    #[\ReturnTypeWillChange]
     public function debugDumpParams ( ){
         return null;
     }
@@ -224,6 +317,7 @@ class PDOStatement extends \PDOStatement {
      * 
      * @return string
      */
+    #[\ReturnTypeWillChange]
     public function  errorCode ( ){
         return odbc_error($this->_db);
     }
@@ -232,6 +326,7 @@ class PDOStatement extends \PDOStatement {
      * 
      * @return array
      */
+    #[\ReturnTypeWillChange]
     public function  errorInfo (){
         return array(odbc_error($this->_db), odbc_error($this->_db), odbc_errormsg($this->_db));
     }
@@ -242,6 +337,7 @@ class PDOStatement extends \PDOStatement {
      * @throws pdoODBCException
      * @return boolean
      */
+    #[\ReturnTypeWillChange]
     public function execute ( $input_parameters = array() ){
         
         /*if (!odbc_execute($this->_statement, $input_parameters))
@@ -258,6 +354,7 @@ class PDOStatement extends \PDOStatement {
         
     }
     
+    #[\ReturnTypeWillChange]
     public function fetch ($fetch_style = null , $cursor_orientation = PDO::FETCH_ORI_NEXT ,  $cursor_offset = 0){
         
         if ($fetch_style == null){
@@ -342,13 +439,14 @@ class PDOStatement extends \PDOStatement {
      * @param type $ctor_args
      * @return array
      */
-    public function fetchAll ($fetch_style= null ,  $fetch_argument = null ,  $ctor_args = array()){
+    #[\ReturnTypeWillChange]
+    public function fetchAll ($fetch_style = null, ...$args){
         
         if ( $fetch_style == null)
             $fetch_style = $this->_fetchMode;
         
-        $this->_fetchArgs = $fetch_argument;
-        $this->_ctor_args = $ctor_args;
+        $this->_fetchArgs = $args[0] ?? null;
+        $this->_ctor_args = $args[1] ?? array();
         
         //reset cursor
         $result = array();
@@ -357,18 +455,39 @@ class PDOStatement extends \PDOStatement {
         }
         return $result;
     }
+    #[\ReturnTypeWillChange]
     public function fetchColumn ( $column_number = 0  ){
         if (!$row = $this->fetch(PDO::FETCH_NUM))
             $this->throwErrors();
         return @$row[$column_number];
     }
     
+    #[\ReturnTypeWillChange]
     public function fetchObject ( $class_name = "stdClass" ,  $ctor_args = array() ){
         
         if (!$row = $this->fetch())
             $this->throwErrors();
         $obj = new $class_name();
+        $allowsDynamicProperties = $obj instanceof \stdClass || method_exists($obj, '__set');
+        if (!$allowsDynamicProperties && PHP_VERSION_ID >= 80200) {
+            $reflection = new \ReflectionClass($obj);
+            do {
+                if ($reflection->getAttributes(\AllowDynamicProperties::class)) {
+                    $allowsDynamicProperties = true;
+                    break;
+                }
+                $reflection = $reflection->getParentClass();
+            } while ($reflection !== false);
+        }
+
         foreach ( $row as $key => $value){
+            if (!$allowsDynamicProperties && !property_exists($obj, $key)) {
+                throw new \yii\base\InvalidConfigException(sprintf(
+                    'Cannot hydrate %s: property "%s" must be declared or dynamic properties must be allowed.',
+                    $class_name,
+                    $key
+                ));
+            }
             $obj->$key = $value;
         }
         return $obj;
@@ -378,14 +497,17 @@ class PDOStatement extends \PDOStatement {
      * @param type $attribute
      * @return mixed
      */
+    #[\ReturnTypeWillChange]
     public function getAttribute ( $attribute ){
         return false;
     }
+    #[\ReturnTypeWillChange]
     public function getColumnMeta ( $column ){
         if (!$result = array('Type' =>odbc_field_type($this->_statement, $column)))
             $this->throwErrors();
         return $result;
     }
+    #[\ReturnTypeWillChange]
     public function nextRowset (  ){
         if (!$result =  odbc_next_result($this->_statement))
             $this->throwErrors();
@@ -395,11 +517,13 @@ class PDOStatement extends \PDOStatement {
      * 
      * @return int
      */
+    #[\ReturnTypeWillChange]
     public function  rowCount (  ){
         $this->_rowCount = odbc_num_rows($this->_statement);
             //$this->throwErrors();
         return $this->_rowCount;
     }
+    #[\ReturnTypeWillChange]
     public function  setAttribute (  $attribute ,  $value ){
         return false;
     }
@@ -408,7 +532,8 @@ class PDOStatement extends \PDOStatement {
      * @param int $mode
      * @return boolean
      */
-    public function  setFetchMode ( $mode, $params = NULL ){
+    #[\ReturnTypeWillChange]
+    public function  setFetchMode ( $mode, ...$params ){
         $this->_fetchMode = $mode;
         return true;
     }

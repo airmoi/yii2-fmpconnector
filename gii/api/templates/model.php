@@ -22,15 +22,14 @@ $layoutList = $tableSchema->layouts;
 namespace <?= $generator->ns ?>;
 
 use Yii;
-use airmoi\yii2fmconnector\api\FileMakerActiveRecord; 
-use airmoi\yii2fmconnector\api\FileMakerRelatedRecord; 
-
+use airmoi\yii2fmconnector\api\FileMakerActiveRecord;
+use airmoi\yii2fmconnector\api\FileMakerRelatedRecord;
 
 /**
  * This is the model class for table "<?= $generator->generateTableName($tableName) ?>".
  *
 <?php foreach ($tableSchema->columns as $column): ?>
- * @property <?= "{$column->phpType}".($column->maxRepeat > 1 ? '[]' : '' )." \${$column->name} ".($column->maxRepeat > 1 ? 'Multivalued, '.$column->maxRepeat. ' repetitions' : '' )."\n" ?>
+ * @property <?= "{$column->phpType}".($column->maxRepeat > 1 ? '[]' : '' )." \${$column->name}".($column->maxRepeat > 1 ? ' Multivalued, '.$column->maxRepeat. ' repetitions' : '' )."\n" ?>
 <?php endforeach; ?>
  *
 <?php foreach ($relations as $name => $relation): ?>
@@ -40,47 +39,45 @@ use airmoi\yii2fmconnector\api\FileMakerRelatedRecord;
 class <?= $className ?> extends FileMakerActiveRecord
 {
     /**
-    * @var string the default layout used to retrieve records
-    */
+     * @var string the default layout used to retrieve records
+     */
     public static $defaultLayout = '<?= $generator->generateTableName($tableName) ?>';
-    
+
     /**
-    * @var string the default layout to use for find requests
-    */
+     * @var string the default layout to use for find requests
+     */
     public static $defaultSearchLayout = '<?= $generator->generateTableName($tableName) ?>';
-    
+
     private static $_vList = [
-        <?php foreach ($valueLists as $valueList): ?>
-         '<?= $valueList ?>',
-        <?php endforeach; ?>
+<?php foreach ($valueLists as $valueList): ?>        '<?= $valueList ?>',
+<?php endforeach; ?>
     ];
-    
+
     /**
      * @return array all available FileMaker layouts for this model
      */
     public static function listLayouts()
     {
         return [
-    <?php foreach ($layoutList as $layoutName): ?>
-        '<?= $layoutName ?>',
-    <?php endforeach; ?>
+<?php foreach ($layoutList as $layoutName): ?>            '<?= $layoutName ?>',
+<?php endforeach; ?>
         ];
     }
-    
+
     /**
      * @return array An array of [ attributeName => valueListName ]
      */
     public function attributeValueLists()
     {
         return [
-<?php foreach ($tableSchema->columns as $column): 
+<?php foreach ($tableSchema->columns as $column):
         if ($column->valueList !== null): ?>
             '<?= $column->name ?>' => '<?= $column->valueList ?>',
-<?php   endif;   
+<?php   endif;
     endforeach; ?>
         ];
     }
-    
+
     /**
      * @return string default FileMaker layout used by this model
      */
@@ -88,7 +85,7 @@ class <?= $className ?> extends FileMakerActiveRecord
     {
         return static::$defaultLayout;
     }
-    
+
     /**
      * @return string default FileMaker layout to be used for search queries
      */
@@ -157,8 +154,6 @@ class <?= $className ?> extends FileMakerActiveRecord
     }
 <?php endif; ?>
 }
-
 <?php foreach ($relations as $name => $relation): ?>
 <?= $generator->render('_related_model.php', ['generator' => $generator, 'relationName' => $name, 'tableSchema' => $relation]) ?>
 <?php endforeach; ?>
-

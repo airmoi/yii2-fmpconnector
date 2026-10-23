@@ -66,6 +66,8 @@ class FileMakerActiveRecord extends BaseActiveRecord
      */
     protected $_attributes;
 
+    protected $_recid;
+
 
     /**
      *
@@ -168,7 +170,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
      * @inheritdoc
      * @return static[]
      */
-    public static function findAll($condition = [], callable $callback = null, $layout = null)
+    public static function findAll($condition = [], ?callable $callback = null, $layout = null)
     {
         $query = static::find($layout);
         $query->andWhere($condition);
@@ -409,6 +411,10 @@ class FileMakerActiveRecord extends BaseActiveRecord
         $attributePrefix = $record->isPortal ? $record->tableOccurence . '::' : '';
         $fmFields = $fmRecord->getFields();
         foreach ($record->attributes() as $attribute) {
+            //Ugly fix : bypass _recid as it is manually defined later
+            if ($attribute == '_recid') {
+                continue;
+            }
             if ($tableSchema->columns[$attribute]->maxRepeat > 1) {
                 $row[$attribute] = [];
                 for ($i = 0; $i <= $tableSchema->columns[$attribute]->maxRepeat; $i++) {
