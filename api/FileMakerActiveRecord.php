@@ -66,9 +66,6 @@ class FileMakerActiveRecord extends BaseActiveRecord
      */
     protected $_attributes;
 
-    protected $_recid;
-
-
     /**
      *
      * @var \airmoi\FileMaker\Object\Record
@@ -379,7 +376,6 @@ class FileMakerActiveRecord extends BaseActiveRecord
                 $request->setGlobal($fieldName, $fieldValue);
             }
             $result = $request->execute();
-            $this->_recid = $result->getFirstRecord()->getRecordId();
             self::populateRecordFromFm($this, $result->getFirstRecord());
 
             $this->afterSave(true, $values);
@@ -567,7 +563,7 @@ class FileMakerActiveRecord extends BaseActiveRecord
      */
     public function getRecId()
     {
-        return $this->_recid;
+        return $this->getAttribute('_recid');
     }
 
     /**

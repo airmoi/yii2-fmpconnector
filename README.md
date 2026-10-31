@@ -21,6 +21,19 @@ or add
 
 to the require section of your `composer.json` file.
 
+Tests
+-----
+
+After installing the Composer dependencies, run the record ID regression tests:
+
+```sh
+php tests/recid-regression.php
+```
+
+An alternative Composer autoloader can be passed as the first argument.
+The tests use real Yii and FileMaker classes with simulated command results;
+they do not connect to a FileMaker server or modify any database.
+
 
 Usage
 -----
@@ -122,4 +135,3 @@ Add these lines to gii module config to enhance model and CRUD generators
     ]
 ],
 ```
-
